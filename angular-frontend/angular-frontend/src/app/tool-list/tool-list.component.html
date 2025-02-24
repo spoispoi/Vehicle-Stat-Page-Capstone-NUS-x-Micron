@@ -1,0 +1,39 @@
+<!-- 
+      <div class="container mt-4">
+        <h1 class="text-center mb-4">Tool List</h1>
+      
+        <div class="input-group mb-4">
+          <input
+            type="text"
+            class="form-control"
+            placeholder="Search by Equip ID"
+            (input)="onSearch($event)"
+          />
+        </div>
+      
+
+        <div id="tool-list"></div>
+  
+      -->
+
+      <div class="container-fluid mt-4">
+        <h1 class="text-center mb-4">Tool List</h1>
+      
+        <!-- Search Bar -->
+        <div class="input-group mb-4 justify-content-center">
+          <input
+            type="text"
+            class="form-control w-50"
+            placeholder="Search by Equip ID"
+            (input)="onSearch($event)"
+          />
+        </div>
+        <p>&nbsp;</p>
+
+        <p>&nbsp;&nbsp;</p>
+
+        <!-- Tool List -->
+        <div class="row g-4 justify-content-center" id="tool-list">
+          <!-- Cards will be dynamically inserted here -->
+        </div>
+      </div>

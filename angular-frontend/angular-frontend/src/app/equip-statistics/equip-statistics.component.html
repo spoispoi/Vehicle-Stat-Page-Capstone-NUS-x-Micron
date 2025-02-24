@@ -1,0 +1,50 @@
+<div class="container-fluid mt-4" style="background-color: #f8f9fa; padding: 2rem; border-radius: 8px;">
+    <h1 class="text-center" style="font-family: 'Roboto', sans-serif; font-weight: 700; color: #343a40;">Equipment Statistics for {{ equipId }}</h1>
+  
+    <!-- Overview Section -->
+    <div class="row justify-content-center mt-4">
+      <div class="col-lg-8 col-md-10">
+        <div class="card shadow-sm" style="border: none; border-radius: 10px; background: #ffffff;">
+          <div class="card-body">
+            <h4 class="card-title" style="font-family: 'Roboto', sans-serif; color: #007bff;">Overview</h4>
+            <p class="card-text" style="font-size: 1.1rem; color: #6c757d;"><strong>Total Errors:</strong> <span id="total-errors" style="color: #212529;"></span></p>
+            <p class="card-text" style="font-size: 1.1rem; color: #6c757d;"><strong>Most Common Event Code:</strong> <span id="most-common-event-code" style="color: #212529;"></span></p>
+            <p class="card-text" style="font-size: 1.1rem; color: #6c757d;"><strong>Most Common Error Name:</strong> <span id="most-common-error-name" style="color: #212529;"></span></p>
+            <p class="card-text" style="font-size: 1.1rem; color: #6c757d;"><strong>Earliest Error Date:</strong> <span id="earliest-error-date" style="color: #212529;"></span></p>
+            <p class="card-text" style="font-size: 1.1rem; color: #6c757d;"><strong>Latest Error Date:</strong> <span id="latest-error-date" style="color: #212529;"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Full List of Entries Section -->
+    <div class="row justify-content-center mt-5">
+      <div class="col-lg-10 col-md-12">
+        <div class="card shadow-sm" style="border: none; border-radius: 10px; background: #ffffff;">
+          <div class="card-body">
+            <h4 class="card-title" style="font-family: 'Roboto', sans-serif; color: #007bff;">Full List of Entries</h4>
+            <div id="equip-entries-container" class="table-responsive">
+              <table class="table table-hover table-striped" style="background: #f8f9fa; border-radius: 5px;">
+                <thead class="thead-dark">
+                  <tr>
+                    <th style="color: #ffffff; background-color: #343a40; font-size: 1rem;">State In Date</th>
+                    <th style="color: #ffffff; background-color: #343a40; font-size: 1rem;">Event Code</th>
+                    <th style="color: #ffffff; background-color: #343a40; font-size: 1rem;">Error Name</th>
+                    <th style="color: #ffffff; background-color: #343a40; font-size: 1rem;">Error Description</th>
+                  </tr>
+                </thead>
+                <tbody id="equip-entries">
+                  <!-- Dynamic entries will be inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Back Button -->
+    <div class="text-center mt-5">
+      <button class="btn btn-secondary" style="background-color: #6c757d; border-color: #6c757d; font-weight: bold;" onclick="window.history.back()">Back to Tool List</button>
+    </div>
+  </div>
