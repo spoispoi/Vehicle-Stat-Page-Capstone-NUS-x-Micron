@@ -1,0 +1,330 @@
+/* GitHub Dark Theme Inspired Styling */
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #0d1117 !important;
+  color: #c9d1d9;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.header-title {
+  text-align: left; /* Align text to the left */
+  margin-top: 100px; /* Add margin on top */
+  margin-bottom: 40px; /* Add margin on bottom */
+
+}
+
+body > * {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+app-root {
+  display: block;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+:host {
+  font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.container, .container-fluid {
+  width: 100%;
+  margin: 50px;
+  padding: 0;
+  max-width: none;
+}
+
+.text-white {
+  color: #f0f6fc !important;
+}
+
+.dark-mode {
+  background-color: #0d1117;
+  color: #c9d1d9;
+}
+
+.dark-mode .form-control {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+
+.dark-mode input.form-control::placeholder {
+  color: #8b949e;
+}
+
+input.form-control {
+  width: 100%; /* Set the width to 50% of the container */
+  max-width: 1000px; /* Set a maximum width */
+  background-color: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-size: 0.95rem;
+}
+
+input::placeholder {
+  color: #999;
+}
+
+.section-title, h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  border-left: 4px solid #238636;
+  padding-left: 12px;
+  color: #f0f6fc;
+}
+
+.dark-mode .section-title {
+  border-color: #2ea043;
+  color: #f0f6fc;
+}
+
+.card {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  padding: 1rem;
+}
+
+.card:hover {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  transform: scale(1.01);
+}
+
+.chart-container {
+  background-color: #161b22;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+ngx-charts-bar-horizontal text,
+ngx-charts-line-chart text,
+ngx-charts-axis-label text,
+ngx-charts-legend-label text {
+  fill: #c9d1d9 !important;
+  font-size: 13px !important;
+}
+
+/* Axis tick labels */
+g.tick text {
+  fill: #c9d1d9 !important;
+  font-size: 12px !important;
+}
+
+/* Axis lines + grid lines */
+g.axis path,
+g.axis line,
+.line,
+.gridline-path {
+  stroke: #c9d1d9 !important;
+  stroke-width: 1px;
+}
+
+.dropdown-menu {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  width: 600px; /* Adjust this value to your desired width */
+}
+
+
+.dropdown-menu .form-check-input {
+  background-color: #0d1117;
+  border-color: #30363d;
+}
+
+.dropdown-menu .form-check-label {
+  color: #c9d1d9;
+}
+
+.dropdown-divider {
+  border-top: 1px solid #30363d;
+}
+
+.btn-outline-light {
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+
+.btn-outline-light:hover {
+  background-color: #21262d;
+  border-color: #8b949e;
+}
+
+.badge {
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35em 0.55em;
+}
+
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.2em;
+}
+
+.list-group-item {
+  background-color: #161b22;
+  border-color: #30363d;
+  color: #c9d1d9;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.list-group-item:hover {
+  background-color: #21262d;
+  transform: scale(1.01);
+}
+
+.chevron-icon {
+  font-size: 1.2rem;
+  color: #8b949e;
+  transition: transform 0.3s ease;
+}
+
+.chevron-icon.rotate {
+  transform: rotate(180deg);
+  color: #58a6ff;
+}
+
+.flex-row-scroll {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 3rem;
+  align-items: flex-start;
+  margin: 20px 0; /* Add margin on the top and bottom */
+}
+
+.scroll-chart {
+  flex: 1 1 68%;
+  min-width: 400px;
+  
+}
+
+.sidebar-list {
+  flex: 1 1 25%;
+  min-width: 280px;
+  margin: 0 40px;
+}
+
+.scroll-container {
+  overflow-x: auto;
+  overflow-y: hidden; /* Hide vertical scroll */
+  max-width: 100%;
+  height: 560px; /* Increase height to create space for x-axis labels */
+  white-space: nowrap;
+  padding-bottom: 4rem; /* Add padding to the bottom to avoid blocking x-axis labels */
+  margin-bottom: 2rem;
+}
+
+/* Axis tick labels */
+::ng-deep g.tick text {
+  fill: #c9d1d9 !important;
+  font-size: 13px !important;
+}
+
+/* Axis labels (e.g. "Error Count", "Error Type") */
+::ng-deep text.axis-label {
+  fill: #c9d1d9 !important;
+  font-size: 14px !important;
+  font-weight: 500;
+}
+
+/* Gridlines and axis lines */
+::ng-deep g.axis path,
+::ng-deep g.axis line,
+::ng-deep .gridline-path {
+  stroke: #444c56 !important; /* softer than pure white */
+  stroke-width: 1 !important;
+}
+
+.tool-list-scrollable {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+  max-height: 80vh; /* Adjust the height as needed */
+  overflow-y: auto;
+  padding: 1rem;
+  margin: 0px 120px; /* Add margin on the left and right */
+}
+
+
+.tool-card {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease-in-out;
+}
+
+.tool-card:hover {
+  transform: scale(1.015);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.tool-header h5 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+.tool-body p {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0.25rem 0;
+  color: #c9d1d9;
+}
+
+.tool-body .label {
+  color: #8b949e;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.tool-footer {
+  margin-top: 1rem;
+}
+
+.badge {
+  background-color: #6c757d !important; /* Grey background */
+  color: #fff !important; /* White text */
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35em 0.55em;
+  border-radius: 0.25rem;
+}
+
+.input-group {
+  margin-right: -100px; /* Add margin on the right */
+}
+
+
+.btn-outline-primary {
+  border-color: white;
+  color: white;
+}
+
+.btn-outline-primary:hover {
+  background-color: white;
+  color: #007bff; /* Adjust this color to match your primary color */
+}
+
+

@@ -1,0 +1,491 @@
+SELECT EquipID
+      ,EquipStateInDT
+      ,EventCode2
+      ,ErrorName
+      ,EquipmentNotes
+  FROM [AMHSHW].[dbo].[Ian_Full_Stack]
+
+
+--    field_mapping = {
+--             'EquipID': 'equip_id',
+--             'EquipStateInDT': 'state_in_date',
+--             'EventCode2': 'event_code',
+--             'ErrorName': 'error_name',
+--             'EquipmentNotes': 'error_description'
+--         }
+
+-- Drop table if exists #DowntimeTrack
+-- SELECT  [Report_WW]
+--       ,[FAB]
+--       ,[EquipID]
+--       ,[WS_Name]
+--       ,[EquipStateID]
+--       ,[SemiStateID]
+--       ,[Availability]
+--       ,[EquipStateInDT]
+--       ,[EquipStateOutDT]
+--       ,[Report_StateHours]
+--       ,[Report_StateMinutes]
+--       ,[StateUsername]
+--       ,[EventCodes]
+--       ,[AssociatedAlarms]
+	 
+--       ,[EquipmentNotes]
+     
+--   into #DowntimeTrack
+--   FROM [AMHSHW].[dbo].[F10NXA_AMHS_DowntimeTrackingReport] DTR
+--   where (EquipID like '%M34%') and (EquipStateID like '%IN_REPAIR%' or EquipStateID like '%IN_PM%')and EquipStateInDT > Dateadd(Month, -24, GetDATE())
+
+
+-- drop table if exists #ET_State 
+--   SELECT distinct E.equip_id
+--     ,E.equip_type_id
+--     ,A.mfg_area_id
+--     ,ESFA.semi_state_id
+--     ,ESFA.equip_state_id as 'Current_State_ID'
+--     ,eild.[value] as AMHS_SYSTEM 
+--     ,case when E.equip_type_id = 'FOUP BUFFER' then 'NTB'
+--           when E.equip_id like 'M34VAD%' then 'SRC340 - Recticle'
+--           when E.equip_type_id = 'VEHICLE - MURATA' then 'SRC340'
+--           when E.equip_type_id = 'G33X_VEHICLE' then 'G33X'
+--           when E.equip_type_id = 'SRC350_VEHICLE' then 'SRC350'
+--           when E.equip_type_id = 'WAFER STOCKER' then 'BWS'
+--           when E.equip_id like 'SORTA%' then 'Sorter'
+--           when E.equip_id like 'SCOPA%' then 'Scope' 
+--           when equip_id like '%N2PA%' then 'N2 Bin'
+--           when equip_id like '%STKA%' then 'Stocker - FOUP'
+--           when equip_id like '%LUSA%' then 'OLUS'
+--           when equip_id like 'TBRSA%' then 'Stocker - Recticle'
+--           else 'NA' end as Eq_Type
+
+-- into #ET_State 
+-- FROM [equip_tracking_DSS].[dbo].[equipment] AS E
+--     LEFT JOIN [reference].[dbo].[mfg_area] AS A
+--             ON A.mfg_area_OID = E.mfg_area_OID
+--     LEFT JOIN [equip_tracking_DSS].[dbo].[current_equipment_state] AS CES
+--         ON CES.equip_OID = E.equip_OID
+--     LEFT JOIN [equip_tracking_DSS].[dbo].[equipment_state_for_area] AS ESFA
+--         ON ESFA.equip_state_OID = CES.equip_state_OID
+--     left join [equip_tracking_DSS].[dbo].[equip_item_level_def] eild 
+--         on (E.[equip_OID] = eild.[level_assoc_OID] and eild.equip_item_no=1265 )
+
+
+
+-- WHERE A.mfg_area_id LIKE '%AMHS%' and
+-- -- ( E.equip_type_id in ('VEHICLE - MURATA','RSC152_SORTFLIP','G33X_VEHICLE','WAFER STOCKER','FOUP BUFFER','CDS350 FOUP STOCKER','VEHICLE','RETICLE STOCKER','SRC350_VEHICLE','OST3200_SCOPE') --- Add recticle stk 
+-- ( E.equip_type_id in ('VEHICLE - MURATA','G33X_VEHICLE','SRC350_VEHICLE','VEHICLE')
+-- or (E.equip_type_id in  ('RSC152_SORTFLIP','WAFER STOCKER','FOUP BUFFER','RETICLE STOCKER','OST3200_SCOPE','OLUS') and right(rtrim(E.equip_id),2) = '00')
+-- or (equip_id like 'MSTKA%' and right(rtrim(E.equip_id),2) = '00')
+-- or (equip_id like 'SORTA%' and equip_type_id <> 'LOADPORT') or (equip_id like '%N2PA%' and (E.equip_type_id = 'UTS'or E.equip_type_id like 'LOADPORT')))
+
+ 
+
+-- and equip_id not like 'VSTKA%'
+-- and equip_type_id like '%VEHICLE%'
+
+-- set transaction isolation level Read Uncommitted
+
+
+
+-- DECLARE @fac_OID   OID			SET  @fac_OID = 0x8E3074D7400A9854 -- F10NXA
+-- DECLARE @MfgAreaId varchar(30)	SET  @MfgAreaId = 'F10 AMHS' -- F10NXA AMHS
+-- DECLARE @backtrack INT			SET	 @backtrack = 1 --minimum is 1
+
+-- DECLARE	@IllegalChars nvarchar(4000) = 
+--         char(0) + char(1) + char(2) + char(3) + char(4) + char(5) + char(6) + char(7) + char(8) + char(11) + 
+--         char(12) + char(13) + char(14) + char(15) + char(16) + char(17) + char(18) + char(19) + char(20) + char(21) + char(22) + 
+--         char(23) + char(24) + char(25) + char(26) + char(27) + char(28) + char(29) + char(30) + char(31);
+
+-- DROP TABLE IF EXISTS #WW
+-- SELECT DISTINCT	
+-- 		CASE WHEN LEN(mfg_ww_no)=1 THEN CONCAT(mfg_year_no,'0',mfg_ww_no) 
+-- 			ELSE  CONCAT(mfg_year_no,mfg_ww_no)
+-- 			END AS WorkWeek 
+-- 		,mfg_ww_begin_datetime ,mfg_ww_end_datetime 
+--   INTO	#WW
+--   FROM	[reference].[dbo].[mfg_year_month_ww] AS MFG_WW with (nolock) 
+--   WHERE mfg_ww_begin_datetime BETWEEN DATEADD(WEEK,-1-@backtrack,GETDATE()) AND DATEADD(WEEK,-@backtrack,GETDATE())
+-- DECLARE @report_start_dt  datetime	SET  @report_start_dt = DATEADD(DAY, -10, GETDATE()) --get data for the last 10 days. Edit here for day range.
+-- DECLARE @report_end_dt    datetime	SET  @report_end_dt   = GETDATE()
+--   PRINT 'WW OK'
+
+-- DROP TABLE IF EXISTS #EQP -- list down required AMHS EquipID, WSName for DowntimeTracking purposes
+-- SELECT DISTINCT 
+-- 		TRIM(eq.equip_id) AS equip_id, eq.equip_OID AS equip_OID, TRIM(fws.WS_name) AS WS_name
+--   INTO #EQP
+--   FROM	equip_tracking_DSS..equipment AS eq with (nolock)
+-- 		LEFT JOIN reference..mfg_area ma with (nolock) ON eq.mfg_area_OID = ma.mfg_area_OID
+-- 		LEFT JOIN reference..FP_equip  fe with (nolock) ON eq.equip_OID = fe.equip_OID AND fe.equip_status = 'ACTIVE'
+-- 		LEFT JOIN reference..FP_WS  fws with (nolock) ON fe.WS_OID = fws.WS_OID
+-- 		LEFT JOIN reference.dbo.FP_WS_in_WS_group ws with (nolock) ON fws.WS_OID = ws.WS_OID
+-- 		LEFT JOIN reference.dbo.FP_WS_group wg with (nolock) ON ws.WS_OID = wg.WS_group_OID
+--   WHERE	eq.equip_status = 'ACTIVE'
+-- 		and eq.mfg_facility_OID = @fac_OID
+-- 		and ma.mfg_area_id = @MfgAreaId
+-- 		and TRIM(eq.equip_type_id) not in ('FOUP','FOSB','FOUP DOOR','LOADPORT','VIRTUAL_AMHS','AMHS REGION','HARNESS','LANYARD','FOSB','LADDER','UTS','TRACK','TPM_6SAUDIT','MEWP','VACUUM SEALER','ZZLILI','BCU','SCPS','OHVC','AUTO LIFTER','FOUP PURGE')
+-- 		AND TRIM(equip_id) NOT IN ('VSTKAA0001','MG33A00000') -- virtual stocker
+-- 		AND NOT WS_name LIKE '10-3MURA_CSS15_STOCKER_01PORT'
+--         AND NOT TRIM(equip_id) LIKE '%L1' 
+-- 		AND NOT TRIM(equip_id) LIKE '%L2' 
+-- 		AND NOT TRIM(equip_id) LIKE '%N3'
+--   PRINT 'EQP OK'
+
+-- DROP TABLE IF EXISTS #EQP_STATE
+-- SELECT DISTINCT -- get historical EquipState
+-- 	eq.equip_id,
+-- 	eq.equip_OID,
+-- 	WS_name,
+-- 	es.equip_state_id,
+-- 	es.semi_state_id,
+-- 	eh.production_state_change_OID,
+-- 	eh.equip_state_in_datetime,
+-- 	eh.equip_state_out_datetime,
+-- 	eh.equip_state_by_system,
+-- 	eh.event_hist_emp_no AS state_emp_no
+--   INTO	#EQP_STATE 
+--   FROM	#EQP eq
+-- 		LEFT JOIN equip_tracking_DSS..event_history eh with (nolock) ON eq.equip_OID = eh.equip_OID
+-- 		LEFT JOIN equip_tracking_DSS..equipment_state_for_area es with (nolock) ON eh.equip_state_OID = es.equip_state_OID
+--   WHERE	(eh.equip_state_in_datetime BETWEEN @report_start_dt AND @report_end_dt)
+-- 		OR (eh.equip_state_out_datetime BETWEEN @report_start_dt AND @report_end_dt)
+-- 		OR (eh.equip_state_in_datetime <= @report_start_dt AND eh.equip_state_out_datetime >= @report_end_dt)
+--   PRINT 'EqpState OK'
+-- INSERT INTO #EQP_STATE --include current EquipState
+-- SELECT DISTINCT
+-- 	eq.equip_id,
+-- 	eq.equip_OID,
+-- 	WS_name,
+-- 	es.equip_state_id,
+-- 	es.semi_state_id,
+-- 	ces.production_state_change_OID,
+-- 	ces.current_equip_state_datetime,
+-- 	getdate(),
+-- 	ces.current_equip_state_by_system,
+-- 	ces.current_equip_state_emp_no
+--   FROM	#EQP eq
+-- 		LEFT JOIN equip_tracking_DSS..current_equipment_state ces with (nolock) ON eq.equip_OID = ces.equip_OID
+-- 		LEFT JOIN equip_tracking_DSS..equipment_state_for_area es ON ces.equip_state_OID = es.equip_state_OID
+--   WHERE	ces.current_equip_state_datetime <= @report_end_dt
+--   PRINT 'EqpStateAdd OK'
+
+-- DROP TABLE IF EXISTS #EVENT_CODE --list all eventcodes associated to the EquipmentState
+-- SELECT DISTINCT
+-- 		ES.equip_id,
+-- 		ES.equip_OID,
+-- 		ES.equip_state_in_datetime, 
+-- 		ES.equip_state_out_datetime,
+-- 		ES.production_state_change_OID,
+-- 		TRIM(ECH.event_code_id) AS event_code_id,
+-- 		ECH.event_code_start_datetime,
+-- 		ECH.event_code_end_datetime
+--   INTO #EVENT_CODE
+--   FROM	#EQP_STATE AS ES with (nolock)
+-- 		INNER JOIN equip_tracking_DSS..event_code_history ECH with (nolock)
+-- 			ON ES.equip_OID = ECH.equip_OID
+-- 			AND ECH.production_state_change_OID = ES.production_state_change_OID
+-- 			AND ((DATEADD(SECOND,1,ECH.event_code_start_datetime) BETWEEN ES.equip_state_in_datetime AND ES.equip_state_out_datetime)
+-- 				OR (DATEADD(SECOND,-1,ECH.event_code_end_datetime) BETWEEN ES.equip_state_in_datetime AND ES.equip_state_out_datetime)
+-- 				OR (DATEADD(SECOND,1,ECH.event_code_start_datetime) <= ES.equip_state_in_datetime AND DATEADD(SECOND,-1,ECH.event_code_end_datetime) > ES.equip_state_out_datetime)
+-- 				OR (DATEADD(SECOND,1,ECH.event_code_start_datetime) <= ES.equip_state_in_datetime AND ISNULL(event_code_end_datetime,1)=1)) --for eventcode which has not ended
+-- 				--OR (DATEADD(SECOND,1,ECH.event_code_start_datetime) <= ES.equip_state_in_datetime AND ISNULL(event_code_end_datetime,1)=1 AND DATEDIFF(DAY,event_code_start_datetime,GETDATE())<=120)) --for current eventcode which has not ended. Added 120days gap to remove any residue
+--   PRINT 'EventCode OK'
+
+-- DROP TABLE IF EXISTS #ALARM_EC ---alarm based on attached eventcode
+-- SELECT DISTINCT
+-- 		EC.equip_OID,
+-- 		--EC.equip_state_in_datetime, EC.equip_state_out_datetime,
+-- 		EC.production_state_change_OID,
+-- 		CONCAT(ATF.autolog_trans_id,': ',UPPER(ATF.autolog_display_name)) AS AlarmID
+--   INTO #ALARM_EC
+--   FROM	#EVENT_CODE AS EC with (nolock)
+-- 		INNER JOIN [equip_tracking_DSS].[dbo].[autolog_transition_definition] AS ATF
+-- 			ON EC.event_code_id = ATF.autolog_trans_id
+--   PRINT 'Alarm_EC OK'
+
+-- set quoted_identifier ON
+
+-- DROP TABLE IF EXISTS #EVENT_CODE_COMPRESSED --group eventcodes together under same EquipmentState block
+-- SELECT DISTINCT 
+-- 		EC.equip_OID
+-- 		,EC.equip_state_in_datetime 
+-- 		,EC.equip_state_out_datetime
+-- 		--,EC.production_state_change_OID
+-- 		,TRIM(STUFF((SELECT DISTINCT ', ' + TRIM(event_code_id)
+-- 			FROM	#EVENT_CODE AS EC2
+-- 			WHERE	EC.equip_OID = EC2.equip_OID
+-- 					--AND EC.production_state_change_OID = EC2.production_state_change_OID
+-- 					AND EC.equip_state_in_datetime = EC2.equip_state_in_datetime
+-- 		FOR XML PATH(''),TYPE).value('.', 'NVARCHAR(MAX)'), 1, 1, '')) AS EventCodes
+--   INTO #EVENT_CODE_COMPRESSED
+--   FROM	#EVENT_CODE AS EC with (nolock)
+--   GROUP BY	equip_OID 
+-- 			--,production_state_change_OID 
+-- 			,equip_state_in_datetime ,EC.equip_state_out_datetime 
+--   PRINT 'EventCodeCompressed OK' 
+
+-- DROP TABLE IF EXISTS #ALARM_EAH --alarm based on alarm-autologging-events
+-- SELECT DISTINCT
+-- 		ES.equip_id,
+-- 		ES.equip_OID,
+-- 		ES.equip_state_in_datetime,
+-- 		ES.production_state_change_OID,
+-- 		EAH.event_id,
+-- 		EAH.event_datetime,
+-- 		EAH.event_text,
+-- 		ATF.autolog_trans_id,
+-- 		ATF.autolog_display_name,
+-- 		CONCAT(ATF.autolog_trans_id,': ',UPPER(ATF.autolog_display_name)) AS AlarmID
+--   INTO #ALARM_EAH
+--   FROM	#EQP_STATE AS ES with (nolock)
+-- 		LEFT JOIN equip_tracking_DSS..equipment_in_group EIG with (nolock)
+-- 			ON EIG.equip_OID = ES.equip_OID
+-- 		LEFT JOIN equip_tracking_DSS..equipment_group EG with (nolock)
+-- 			ON EG.equip_group_OID = EIG.equip_group_OID
+-- 		INNER JOIN equip_tracking_DSS..event_activity_history AS EAH with (nolock)
+-- 			ON EAH.equip_OID = ES.equip_OID
+-- 			AND EAH.event_state = 'SET'
+-- 			AND EAH.event_type = 'ALARM'
+-- 			--AND NOT EAH.event_id IN ('7851','1667')
+-- 			AND NOT EAH.event_id IN ('1667')
+-- 			AND DATEADD(SECOND,5,EAH.event_datetime) BETWEEN ES.equip_state_in_datetime AND DATEADD(SECOND,5,ES.equip_state_in_datetime) -- compensate for AlarmEvent occuring faster that equipmentstate logging
+-- 			AND equip_state_by_system LIKE 'ETA'
+-- 		INNER JOIN [equip_tracking_DSS].[dbo].[autolog_transition_definition] AS ATF with (nolock)
+-- 			ON TRIM(ATF.autolog_trans_id) = TRIM(EAH.event_id)
+-- 			AND ATF.equip_group_OID = EIG.equip_group_OID
+--   WHERE	ISNULL(EAH.event_id,'1')!='1'
+--   PRINT 'Alarm_EAH OK' 
+
+-- DROP TABLE IF EXISTS #NOTES
+-- SELECT DISTINCT
+-- 		ES.equip_id,
+-- 		ES.equip_OID,
+-- 		ES.equip_state_in_datetime,
+-- 		ES.equip_state_out_datetime,
+-- 		EN.production_state_change_OID,
+-- 		CHARINDEX(CHAR(9),EN.note_text) AS TabCheck,
+-- 		CHARINDEX(CHAR(10),EN.note_text) AS LineBreakCheck,
+-- 		CHARINDEX(CHAR(13),EN.note_text) AS CarriageBreakCheck,
+-- 		CHARINDEX(TRIM(SAP2.micron_username),EN.note_text) AS UsernameCheck,
+-- 		LEN(TRIM(EN.note_text)) AS NoteLength,
+-- 		CASE 
+-- 			WHEN TRIM(EN.note_text) LIKE '%has entered the above notes%' THEN TRIM(LEFT(TRIM(EN.note_text),CHARINDEX('has entered the above notes',TRIM(EN.note_text))-1))
+-- 			WHEN TRIM(EN.note_text) LIKE '%Delay Log by%' THEN TRIM(LEFT(TRIM(EN.note_text),CHARINDEX('Delay Log by',TRIM(EN.note_text))-1))
+-- 			ELSE TRIM(EN.note_text)
+-- 			END AS note_text,
+-- 		EN.created_datetime,
+-- 		EN.created_by_emp_no,
+-- 		EN.modified_datetime,
+-- 		EN.modified_by_emp_no,
+-- 		ISNULL(SAP2.micron_username,'SYSTEM') AS NoteUsername
+-- INTO #NOTES
+--   FROM	#EQP_STATE AS ES with (nolock)
+-- 		--INNER JOIN equip_tracking_DSS..event_note AS EN with (nolock)
+-- 		INNER JOIN [equip_tracking_DSS].[dbo].[equip_note] AS EN with (nolock)
+-- 			ON EN.equip_OID = ES.equip_OID
+-- 			AND ES.production_state_change_OID = EN.production_state_change_OID
+-- 			--AND (EN.created_datetime >= ES.equip_state_in_datetime
+-- 			--	OR EN.created_datetime < ES.equip_state_out_datetime)
+-- 		LEFT JOIN reference..SAP_worker AS SAP2 with (nolock)
+-- 			ON EN.created_by_emp_no = SAP2.worker_no 
+--   PRINT 'Notes OK'
+
+-- DROP TABLE IF EXISTS #NOTES2 --to filter repeated notes and remove illegal character which cannot run in XML 
+-- SELECT DISTINCT 
+-- 	equip_OID 
+-- 	--,equip_state_in_datetime
+-- 	,production_state_change_OID
+-- 	--,REPLACE(REPLACE(TRIM(note_text),CHAR(13),' '),CHAR(0x000B),' ') AS note_text
+-- 	,TRANSLATE(TRIM(note_text), @IllegalChars, replicate('.', len(@IllegalChars))) AS note_text
+-- 	,MIN(created_datetime) AS created_datetime
+--   INTO #NOTES2
+--   FROM #NOTES
+--   GROUP BY equip_OID ,production_state_change_OID ,TRANSLATE(TRIM(note_text), @IllegalChars, replicate('.', len(@IllegalChars)))
+--   --,REPLACE(REPLACE(TRIM(note_text),CHAR(13),' '),CHAR(0x000B),' ')
+--   PRINT 'NotesFilter OK'
+
+-- DROP TABLE IF EXISTS #NOTES_COMPRESSED --group eventcodes together under same EquipmentState block
+-- SELECT DISTINCT 
+-- 		EN.equip_OID
+-- 		--,EN.equip_state_in_datetime 
+-- 		--,EN.equip_state_out_datetime
+-- 		,EN.production_state_change_OID
+-- 		,TRIM(STUFF((SELECT Char(10) + note_text
+-- 						FROM	#NOTES2 AS EN2
+-- 						WHERE	EN.equip_OID = EN2.equip_OID
+-- 								AND EN.production_state_change_OID = EN2.production_state_change_OID
+-- 								--AND EN.equip_state_in_datetime = EN2.equip_state_in_datetime
+-- 						ORDER BY EN2.created_datetime ASC
+-- 						FOR XML PATH(''),TYPE)
+-- 					.value('.', 'NVARCHAR(MAX)'), 1, 1, '')
+-- 			 ) AS EquipmentNote
+--   INTO #NOTES_COMPRESSED
+--   FROM	#NOTES2 AS EN with (nolock)
+--   GROUP BY	EN.equip_OID 
+-- 			,EN.production_state_change_OID 
+-- 			--,EN.equip_state_in_datetime ,EN.equip_state_out_datetime 
+--   PRINT 'NotesCompressed OK' 
+
+-- DROP TABLE IF EXISTS #MAIN
+-- SELECT DISTINCT
+-- 	(SELECT #WW.WorkWeek FROM #WW) AS Report_WW
+-- 	--ROW_NUMBER() OVER (ORDER BY ES.equip_id,ES.equip_state_in_datetime ASC) AS RowID,
+-- 	,CASE WHEN TRIM(ES.WS_name) = '10-3MURA_SRC340_OHT_01VEHICLE' THEN 'F10N'
+-- 			WHEN TRIM(ES.WS_name) = '10-3MURA_G33X_OHT_01VEHICLE' THEN 'F10A'
+-- 			WHEN TRIM(ES.WS_name) LIKE '%N2P%' THEN EILD.value
+-- 			WHEN LID.Facility = 'F10A' THEN 'F10A'
+-- 			ELSE 'F10N'
+-- 			END AS FAB
+-- 	,TRIM(ES.equip_id) AS EquipID
+-- 	,TRIM(ES.WS_name) AS WS_Name
+-- 	,TRIM(ES.equip_state_id) AS EquipStateID
+-- 	--,ES.production_state_change_OID
+-- 	,TRIM(ES.semi_state_id) AS SemiStateID
+-- 	,CASE
+-- 			WHEN semi_state_id in ('PRODUCTIVE', 'STANDBY') then 'AVAILABLE'
+-- 			ELSE 'UNAVAILABLE'
+-- 			END AS Availability
+-- 	,ES.equip_state_in_datetime AS EquipStateInDT
+-- 	,ES.equip_state_out_datetime AS EquipStateOutDT
+-- 	,CASE WHEN ES.equip_state_in_datetime BETWEEN @report_start_dt AND @report_end_dt
+-- 				THEN CASE WHEN ES.equip_state_out_datetime BETWEEN @report_start_dt AND @report_end_dt
+-- 							THEN datediff(second, ES.equip_state_in_datetime, ES.equip_state_out_datetime)/3600.0
+-- 							--THEN cast(ROUND(datediff(second, equip_state_in_datetime, equip_state_out_datetime)/3600.0,2) as numeric(36,2))
+-- 						  WHEN ES.equip_state_out_datetime > @report_end_dt
+-- 							THEN datediff(second, ES.equip_state_in_datetime, @report_end_dt)/3600.0
+-- 							--THEN cast(ROUND(datediff(second, equip_state_in_datetime, @report_end_dt)/3600.0,2) as numeric(36,2))
+-- 						  END
+-- 			WHEN ES.equip_state_in_datetime < @report_start_dt
+-- 				THEN CASE WHEN ES.equip_state_out_datetime BETWEEN @report_start_dt AND @report_end_dt
+-- 							THEN datediff(second, @report_start_dt, ES.equip_state_out_datetime)/3600.0
+-- 							--THEN cast(ROUND(datediff(second, @report_start_dt, equip_state_out_datetime)/3600.0,2) as numeric(36,2))
+-- 						  WHEN ES.equip_state_out_datetime > @report_end_dt
+-- 							THEN datediff(second, @report_start_dt, @report_end_dt)/3600.0
+-- 							--THEN cast(ROUND(datediff(second, @report_start_dt, @report_end_dt)/3600.0,2) as numeric(36,2))
+-- 						  END
+-- 			END AS Report_StateHours
+-- 		,CASE WHEN ES.equip_state_in_datetime BETWEEN @report_start_dt AND @report_end_dt
+-- 				THEN CASE WHEN ES.equip_state_out_datetime BETWEEN @report_start_dt AND @report_end_dt
+-- 							THEN datediff(second, ES.equip_state_in_datetime, ES.equip_state_out_datetime)/60.0
+-- 							--THEN cast(ROUND(datediff(second, equip_state_in_datetime, equip_state_out_datetime)/60.0,2) as numeric(36,2))
+-- 						  WHEN ES.equip_state_out_datetime > @report_end_dt
+-- 							THEN datediff(second, ES.equip_state_in_datetime, @report_end_dt)/60.0
+-- 							--THEN cast(ROUND(datediff(second, equip_state_in_datetime, @report_end_dt)/60.0,2) as numeric(36,2))
+-- 						  END
+-- 			WHEN ES.equip_state_in_datetime < @report_start_dt
+-- 				THEN CASE WHEN ES.equip_state_out_datetime BETWEEN @report_start_dt AND @report_end_dt
+-- 							THEN datediff(second, @report_start_dt, ES.equip_state_out_datetime)/60.0
+-- 							--THEN cast(ROUND(datediff(second, @report_start_dt, equip_state_out_datetime)/60.0,2) as numeric(36,2))
+-- 						  WHEN ES.equip_state_out_datetime > @report_end_dt
+-- 							THEN datediff(second, @report_start_dt, @report_end_dt)/60.0
+-- 							--THEN cast(ROUND(datediff(second, @report_start_dt, @report_end_dt)/60.0,2) as numeric(36,2))
+-- 						  END
+-- 			END AS Report_StateMinutes
+-- 	,ISNULL(SAP1.micron_username,equip_state_by_system) AS StateUsername
+-- 	,ECC.EventCodes
+-- 	,CASE WHEN ISNULL(AC.AlarmID,'1')!='1' OR ISNULL(A.AlarmID,'1')!='1' THEN ISNULL(AC.AlarmID,A.AlarmID)
+-- 		WHEN semi_state_id = 'UNSCHEDULED_DOWNTIME' AND EN.EquipmentNote LIKE '%AlarmTag%' THEN UPPER(SUBSTRING(EN.EquipmentNote,CHARINDEX('[',EN.EquipmentNote)+1,CHARINDEX(']',EN.EquipmentNote)-CHARINDEX('[',EN.EquipmentNote)-1))
+-- 		WHEN semi_state_id = 'UNSCHEDULED_DOWNTIME' AND EN.EquipmentNote LIKE '%<Alarm code>:%' THEN UPPER(SUBSTRING(EN.EquipmentNote,CHARINDEX('<Alarm code>:',EN.EquipmentNote)+14,CHARINDEX('<Alarm description>:',EN.EquipmentNote)-CHARINDEX('<Alarm code>:',EN.EquipmentNote)-14))
+-- 		WHEN semi_state_id = 'UNSCHEDULED_DOWNTIME' AND LEFT(TRIM(EN.EquipmentNote),10) LIKE '%:%' THEN (SELECT UPPER(CONCAT(MIN(ATF.autolog_trans_id),': ',MIN(ATF.autolog_display_name))) FROM [equip_tracking_DSS].[dbo].[autolog_transition_definition] AS ATF WHERE ATF.autolog_trans_id=LEFT(TRIM(EN.EquipmentNote),CHARINDEX(':',TRIM(EN.EquipmentNote))-1))
+-- 		--LEFT(TRIM(EN.EquipmentNote),CHARINDEX(':',TRIM(EN.EquipmentNote))-1)
+-- 		WHEN semi_state_id = 'UNSCHEDULED_DOWNTIME' THEN 'UNKNOWN: Please refer EquipmentNotes'
+-- 		END AS AssociatedAlarm
+-- 	--,AC.AlarmID AS Alarm_EC
+-- 	--,A.AlarmID AS Alarm_EAH
+-- 	,CASE WHEN LEN(TRIM(EN.EquipmentNote))<=7500 THEN TRIM(EN.EquipmentNote)
+-- 		ELSE LEFT(TRIM(EN.EquipmentNote),7500)
+-- 		END AS EquipmentNotes
+-- 	--,GETDATE() AS QueryDateTime
+-- INTO #MAIN
+-- FROM #EQP_STATE AS ES with (nolock)
+-- 		LEFT JOIN reference..SAP_worker AS SAP1 with (nolock)
+-- 			ON state_emp_no = SAP1.worker_no
+-- 		LEFT JOIN #EVENT_CODE_COMPRESSED AS ECC with (nolock)
+-- 			ON ECC.equip_OID = ES.equip_OID
+-- 			--AND ES.production_state_change_OID = ECC.production_state_change_OID
+-- 			AND ECC.equip_state_in_datetime = ES.equip_state_in_datetime
+-- 		LEFT JOIN #ALARM_EC AS AC with (nolock)
+-- 			ON AC.equip_OID = ES.equip_OID
+-- 			AND AC.production_state_change_OID = ES.production_state_change_OID
+-- 			AND ES.semi_state_id = 'UNSCHEDULED_DOWNTIME'
+-- 		LEFT JOIN (SELECT DISTINCT equip_OID ,production_state_change_OID ,MIN(AlarmID) AS AlarmID FROM #ALARM_EAH with (nolock) GROUP BY equip_OID,production_state_change_OID) AS A 
+-- 			ON A.equip_OID = ES.equip_OID
+-- 			AND A.production_state_change_OID = ES.production_state_change_OID
+-- 			AND ES.semi_state_id = 'UNSCHEDULED_DOWNTIME'
+-- 		LEFT JOIN #NOTES_COMPRESSED AS EN
+-- 			ON EN.equip_OID = ES.equip_OID
+-- 			AND EN.production_state_change_OID = ES.production_state_change_OID
+-- 			--AND EN.equip_state_in_datetime = ES.equip_state_in_datetime
+-- 			AND NOT TRIM(ES.semi_state_id) IN ('PRODUCTIVE','STANDBY')
+-- 		LEFT JOIN [AMHSHW].[dbo].[LID_Mapping_PDM] AS LID
+-- 			ON LID.LID = SUBSTRING(ES.equip_id,6,3)
+-- 		LEFT JOIN equip_tracking_DSS.dbo.equip_item_level_def AS EILD
+-- 			ON ISNULL(level_assoc_OID,1)!=1 
+-- 			AND equip_item_name ='WW_AMHS_SYSTEM'
+-- 			AND EILD.level_assoc_OID=ES.equip_OID
+
+-- 		LEFT JOIN equip_tracking_DSS..equipment_in_group EIG with (nolock)
+-- 			ON EIG.equip_OID = ES.equip_OID
+-- 			AND ES.semi_state_id = 'UNSCHEDULED_DOWNTIME'
+-- 			AND ISNULL(AC.AlarmID,'1')='1' AND ISNULL(A.AlarmID,'1')='1'
+-- 		LEFT JOIN [equip_tracking_DSS].[dbo].[autolog_transition_definition] AS ATF with (nolock)
+-- 			ON semi_state_id = 'UNSCHEDULED_DOWNTIME' 
+-- 			AND ISNULL(AC.AlarmID,'1')='1' AND ISNULL(A.AlarmID,'1')='1'
+-- 			AND LEFT(TRIM(EN.EquipmentNote),10) LIKE '%:%'
+-- 			AND ATF.equip_group_OID = EIG.equip_group_OID
+-- 			AND TRIM(ATF.autolog_trans_id) = LEFT(TRIM(EN.EquipmentNote),CHARINDEX(':',TRIM(EN.EquipmentNote))-1)
+
+--   ORDER BY TRIM(ES.equip_id), ES.equip_state_in_datetime ASC
+--   PRINT 'MAIN OK'
+
+-- SELECT DISTINCT *
+-- into #Downtime_1 
+--   FROM #MAIN
+--    where (EquipID like '%M34%') and (EquipStateID like '%IN_REPAIR%' or EquipStateID like '%IN_PM%')and EquipStateInDT > Dateadd(Day, -10, GetDATE())
+
+-- Select * into #finaltablewithoutET
+--    from
+--    (Select * 
+--    from #DowntimeTrack
+--    union 
+--    Select * 
+--    from #Downtime_1) a
+-- -----
+-- --drop table if exists #Main
+-- --drop table if exists #this_one
+-- --drop table if exists #this_one
+
+
+-- Select [Report_WW]
+--       ,[FAB]
+--       ,[EquipID]
+--       ,[WS_Name]
+--       ,[EquipStateID]
+--       ,[SemiStateID]
+--       ,[Availability]
+--       ,[EquipStateInDT]
+--       ,[EquipStateOutDT]
+--       ,[Report_StateHours]
+--       ,[Report_StateMinutes]
+--       ,[StateUsername]
+--       ,[EventCodes]
+--       ,[AssociatedAlarms]
+-- 	  ,CASE
+-- 	   when LEFT(AssociatedAlarms, 1) like '9' THEN LEFT(AssociatedAlarms, 4) 
+-- 	   when LEFT(AssociatedAlarms, 1) like '7' THEN LEFT(AssociatedAlarms, 4) 
+-- 	   else LEFT(AssociatedAlarms, 6) 
+-- 	   end as EventCode2
+-- 	  ,CASE 
+-- 	   when LEFT(AssociatedAlarms, 1) like '9' THEN  SUBSTRING(AssociatedAlarms, 7, 100) 
+-- 	   when LEFT(AssociatedAlarms, 1) like '7' THEN  SUBSTRING(AssociatedAlarms, 7, 100) 
+-- 	   else SUBSTRING(AssociatedAlarms, 9, 100) 
+-- 	   end as ErrorName
+--       ,[EquipmentNotes]
+-- 	  ,equip_type_id
+-- 	  ,#ET_State.Current_State_ID 
+      
+-- into #this_one_final
+
+-- From
+-- #finaltablewithoutET left join #ET_State on #finaltablewithoutET.EquipID = #ET_State.equip_id
+
+-- select * from  #this_one_final

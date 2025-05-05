@@ -1,0 +1,69 @@
+/* You can add global styles to this file, and also import other style files */
+body, html {
+  background-color: #121212 !important;
+  margin: 0;
+  padding: 0;
+  color: #c9d1d9;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body > * {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+app-root {
+  display: block;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Alert Info */
+.alert-info {
+  background-color: #2b3e50;
+  border-color: #517fa4;
+  color: #ffffff;
+}
+
+/* ngx-charts label, legend, axis styling in dark mode */
+::ng-deep .ngx-charts text,
+::ng-deep .ngx-charts .tick text,
+::ng-deep .ngx-charts .axis-label,
+::ng-deep .ngx-charts .legend-label text {
+  fill: #c9d1d9 !important;
+  font-size: 13px !important;
+}
+
+/* Chart gridlines + axis only */
+::ng-deep .ngx-charts .axis path,
+::ng-deep .ngx-charts .axis line,
+::ng-deep .ngx-charts .gridline-path {
+  stroke: #5a5a5a !important;
+  stroke-width: 1;
+}
+
+/* Remove blue border */
+.highlight-chart {
+  border: none !important;
+}
+
+.highlight-entry {
+  background-color: transparent !important;
+}
+
+
+
+/* Ensure text color remains white on hover */
+::ng-deep ngx-charts-advanced-pie-chart text,
+::ng-deep ngx-charts-advanced-pie-chart .label,
+::ng-deep ngx-charts-advanced-pie-chart .legend-label {
+ fill: #ffffff !important; /* Default text color */
+}
+
+::ng-deep ngx-charts-advanced-pie-chart text:hover,
+::ng-deep ngx-charts-advanced-pie-chart .label:hover,
+::ng-deep ngx-charts-advanced-pie-chart .legend-label:hover {
+ fill: #ffffff !important; /* Maintain text color on hover */
+}

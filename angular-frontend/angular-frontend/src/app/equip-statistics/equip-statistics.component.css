@@ -1,0 +1,264 @@
+.container {
+  max-width: 900px;
+  margin: auto;
+  text-align: center;
+}
+
+.card {
+  margin-top: 20px;
+  padding: 20px;
+}
+
+h1 {
+  color: #007bff;
+}
+
+body, html {
+  background-color: #121212 !important;
+  margin: 0;
+  padding: 0;
+  color: #e0e0e0;
+}
+
+.card {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+.card-title,
+h4,
+.table th,
+.table td {
+  color: #ffffff !important;
+}
+
+.table {
+  background-color: #2a2a2a;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: #2e2e2e;
+}
+
+.thead-dark th {
+  background-color: #343a40 !important;
+  color: #ffffff !important;
+}
+
+::ng-deep .ngx-charts text {
+  fill: #e0e0e0 !important;
+}
+
+::ng-deep .legend-label {
+  color: #e0e0e0 !important;
+}
+
+.page-title {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400; 
+  color: #e0e0e0;
+  margin-top: 50px; /* Adjust this value to your desired margin */
+}
+
+
+ngx-charts-bar-vertical-stacked,
+ngx-charts-pie-chart,
+ngx-charts-advanced-pie-chart {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+::ng-deep .legend-label text {
+  fill: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 500;
+}
+
+.tech-card {
+  background-color: var(--card-bg, #121417);
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+  color: var(--text-color, #ffffff);
+}
+
+.text-accent {
+  color: #00c8ff;
+}
+
+.page-title {
+  color: var(--text-color, #ffffff);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.btn-toggle-dark {
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 6px 12px;
+  background-color: #1f1f1f;
+  color: #eee;
+  border: 1px solid #444;
+}
+
+.chart-card,
+.stat-card,
+.entries-card {
+  background: #1e1e1e;
+  color: #eaeaea;
+}
+
+.chart-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #4dabf7;
+}
+
+.text-highlight {
+  color: #00e5ff;
+}
+
+.text-accent {
+  color: #00e5ff;
+}
+
+.alert-filter {
+  background-color: #212529;
+  color: #f8f9fa;
+  border-left: 4px solid #0dcaf0;
+}
+
+.table-header th {
+  background-color: #343a40;
+  color: white;
+  font-weight: 500;
+}
+
+.entry-row:hover {
+  background-color: #2e2e2e;
+}
+
+.empty-state {
+  text-align: center;
+  font-style: italic;
+  color: #aaa;
+}
+
+.btn-outline-accent {
+  border: 1px solid #00c8ff;
+  color: #00c8ff;
+  background: transparent;
+}
+
+.btn-outline-accent:hover {
+  background-color: #00c8ff;
+  color: #fff;
+}
+
+.table tbody tr td {
+  color: #eaeaea;
+}
+
+.table thead th {
+  background-color: #2c2f33;
+  color: #ffffff;
+}
+
+.table {
+  background-color: #1e1e1e;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  border-color: #333;
+}
+
+.table th {
+  background-color: #2c2f33;
+  color: #f1f1f1;
+  font-weight: 600;
+  border-bottom: 1px solid #444;
+}
+
+.table td {
+  color: #e0e0e0;
+  background-color: #2a2a2a;
+  vertical-align: middle;
+  border-top: 1px solid #444;
+}
+
+.table tbody tr:hover td {
+  background-color: #3a3a3a;
+  color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:nth-child(even) td {
+  background-color: #252525;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16px, 1fr));
+  gap: 2px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.heatmap-cell {
+  width: 100%;
+  padding-top: 100%; /* makes it a square */
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.pm-card {
+  background-color: #1f1f1f;
+  color: #f1f1f1;
+}
+
+.legend-vertical-wrapper ::ng-deep .advanced-pie-legend {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  overflow-x: hidden !important;
+  max-height: 400px;
+}
+
+ngx-charts-advanced-pie-chart {
+  max-height: 420px;
+}
+
+
+/* Ensure default text color */
+.chart-card .card-body h5,
+.chart-card .card-body p,
+.chart-card .card-body .legend-label text {
+color:  #ffffff !important;
+}
+
+/* Maintain text color on hover */
+.chart-card .card-body h5:hover,
+.chart-card .card-body p:hover,
+.chart-card .card-body .legend-label text:hover {
+color: #ffffff !important;
+}
+
+
+
+ngx-charts-advanced-pie-chart text {
+  fill: #ffffff !important; /* Default text color */
+  }
+  
+  ngx-charts-advanced-pie-chart text:hover {
+ fill: #ffffff !important; /* Maintain text color on hover */
+  }
+  
