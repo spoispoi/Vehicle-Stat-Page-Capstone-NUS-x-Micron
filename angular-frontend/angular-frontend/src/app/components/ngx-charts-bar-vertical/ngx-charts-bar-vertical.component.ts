@@ -1,6 +1,7 @@
+/* istanbul ignore file */
 import { Component } from '@angular/core';
 import { OnInit, Inject } from '@angular/core';
-import { ToolService } from '../tool.service';
+import { ToolService } from '../../tool.service';
 
 @Component({
   selector: 'app-ngx-charts-bar-vertical',
@@ -26,7 +27,7 @@ export class NgxChartsBarVerticalComponent {
   constructor(private toolService: ToolService) {}
 
   ngOnInit(): void {
-    this.toolService.getTools().subscribe((tools) => {
+    this.toolService.getTools().subscribe((tools: any[]) => {
       const errorCounts = this.calculateErrorCounts(tools);
       this.errorData = this.formatChartData(errorCounts);
     });

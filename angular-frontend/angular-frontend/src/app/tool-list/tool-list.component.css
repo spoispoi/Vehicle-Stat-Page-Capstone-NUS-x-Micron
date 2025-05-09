@@ -3,7 +3,7 @@
 html, body {
   margin: 0 !important;
   padding: 0 !important;
-  background-color: #0d1117 !important;
+  background-color: #000000 !important;
   color: #c9d1d9;
   font-family: 'Segoe UI', Roboto, sans-serif;
   height: 100%;
@@ -11,10 +11,9 @@ html, body {
 }
 
 .header-title {
-  text-align: left; /* Align text to the left */
-  margin-top: 100px; /* Add margin on top */
-  margin-bottom: 40px; /* Add margin on bottom */
-
+  text-align: left;
+  margin-top: 100px;
+  margin-bottom: 40px;
 }
 
 body > * {
@@ -34,11 +33,19 @@ app-root {
   font-size: 0.95rem;
 }
 
+/* Fix applied for full dark background and viewport coverage */
+html, body, app-root, :host {
+  background-color: #000000 !important;
+  min-height: 100vh;
+  width: 100vw;
+  display: block;
+}
+
 .container, .container-fluid {
   width: 100%;
-  margin: 50px;
-  padding: 0;
-  max-width: none;
+  margin: 0 auto;
+  padding: 0 2rem;
+  max-width: 100%;
 }
 
 .text-white {
@@ -61,8 +68,8 @@ app-root {
 }
 
 input.form-control {
-  width: 100%; /* Set the width to 50% of the container */
-  max-width: 1000px; /* Set a maximum width */
+  width: 100%;
+  max-width: 1000px;
   background-color: #161b22;
   color: #c9d1d9;
   border: 1px solid #30363d;
@@ -119,13 +126,11 @@ ngx-charts-legend-label text {
   font-size: 13px !important;
 }
 
-/* Axis tick labels */
 g.tick text {
   fill: #c9d1d9 !important;
   font-size: 12px !important;
 }
 
-/* Axis lines + grid lines */
 g.axis path,
 g.axis line,
 .line,
@@ -138,9 +143,8 @@ g.axis line,
   background-color: #161b22;
   color: #c9d1d9;
   border: 1px solid #30363d;
-  width: 600px; /* Adjust this value to your desired width */
+  width: 600px;
 }
-
 
 .dropdown-menu .form-check-input {
   background-color: #0d1117;
@@ -169,6 +173,9 @@ g.axis line,
   font-size: 0.8rem;
   font-weight: 500;
   padding: 0.35em 0.55em;
+  background-color: #6c757d !important;
+  color: #fff !important;
+  border-radius: 0.25rem;
 }
 
 .spinner-border {
@@ -208,13 +215,12 @@ g.axis line,
   flex-wrap: wrap;
   margin-bottom: 3rem;
   align-items: flex-start;
-  margin: 20px 0; /* Add margin on the top and bottom */
+  margin: 20px 0;
 }
 
 .scroll-chart {
   flex: 1 1 68%;
   min-width: 400px;
-  
 }
 
 .sidebar-list {
@@ -225,32 +231,29 @@ g.axis line,
 
 .scroll-container {
   overflow-x: auto;
-  overflow-y: hidden; /* Hide vertical scroll */
+  overflow-y: hidden;
   max-width: 100%;
-  height: 560px; /* Increase height to create space for x-axis labels */
+  height: 560px;
   white-space: nowrap;
-  padding-bottom: 4rem; /* Add padding to the bottom to avoid blocking x-axis labels */
+  padding-bottom: 4rem;
   margin-bottom: 2rem;
 }
 
-/* Axis tick labels */
 ::ng-deep g.tick text {
   fill: #c9d1d9 !important;
   font-size: 13px !important;
 }
 
-/* Axis labels (e.g. "Error Count", "Error Type") */
 ::ng-deep text.axis-label {
   fill: #c9d1d9 !important;
   font-size: 14px !important;
   font-weight: 500;
 }
 
-/* Gridlines and axis lines */
 ::ng-deep g.axis path,
 ::ng-deep g.axis line,
 ::ng-deep .gridline-path {
-  stroke: #444c56 !important; /* softer than pure white */
+  stroke: #444c56 !important;
   stroke-width: 1 !important;
 }
 
@@ -258,12 +261,11 @@ g.axis line,
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.5rem;
-  max-height: 80vh; /* Adjust the height as needed */
+  max-height: 80vh;
   overflow-y: auto;
   padding: 1rem;
-  margin: 0px 120px; /* Add margin on the left and right */
+  margin: 0px 120px;
 }
-
 
 .tool-card {
   background-color: #161b22;
@@ -303,19 +305,9 @@ g.axis line,
   margin-top: 1rem;
 }
 
-.badge {
-  background-color: #6c757d !important; /* Grey background */
-  color: #fff !important; /* White text */
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.35em 0.55em;
-  border-radius: 0.25rem;
-}
-
 .input-group {
-  margin-right: -100px; /* Add margin on the right */
+  margin-right: -100px;
 }
-
 
 .btn-outline-primary {
   border-color: white;
@@ -324,7 +316,5 @@ g.axis line,
 
 .btn-outline-primary:hover {
   background-color: white;
-  color: #007bff; /* Adjust this color to match your primary color */
+  color: #007bff;
 }
-
-

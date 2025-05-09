@@ -86,7 +86,7 @@ export class ToolListComponent implements OnInit {
   };
 
   colorSchemeEquipTopCount: Color = {
-    domain: [], // We'll populate this dynamically
+    domain: [], //  populate this dynamically
     group: ScaleType.Ordinal,
     selectable: true,
     name: 'equipTopCount'
@@ -115,7 +115,7 @@ export class ToolListComponent implements OnInit {
       this.top10ErrorData = this.formatTop10ChartData(errorCounts);
 
       this.colorSchemeTopCount.domain = this.top10ErrorData.map((item, index) => 
-      index === 0 ? '#ff6347' : '#484848' // Top count in tomato color, others in nude color
+      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
     );
 
 
@@ -141,7 +141,7 @@ export class ToolListComponent implements OnInit {
       this.top20Equipments = this.equipIdErrorData.slice(0, 50);
 
       this.colorSchemeEquipTopCount.domain = this.top20Equipments.map((item, index) => 
-      index === 0 ? '#ff6347' : '#484848' // Top count in tomato color, others in nude color
+      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
     );
 
 
@@ -243,12 +243,19 @@ export class ToolListComponent implements OnInit {
   }
 
   formatDate(dateString: string | null): string {
-    if (!dateString) return '';
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return `${date.getFullYear()}-${('0' + (date.getMonth() + 1)).slice(-2)} ${date.toLocaleTimeString()}`;
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2);
+    const day = ('0' + date.getDate()).slice(-2);
+    const hours = ('0' + date.getHours()).slice(-2);
+    const minutes = ('0' + date.getMinutes()).slice(-2);
+    const seconds = ('0' + date.getSeconds()).slice(-2);
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 
   sortByEquipId(): void {
+    this.tools.sort((a, b) => a.equip_id.localeCompare(b.equip_id));
     this.filteredTools.sort((a, b) => a.equip_id.localeCompare(b.equip_id));
   }
 

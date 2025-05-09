@@ -1,3 +1,10 @@
+body, html {
+  background-color: #0d1117 !important;
+  margin: 0;
+  padding: 0;
+  color: #e0e0e0;
+}
+
 .container {
   max-width: 900px;
   margin: auto;
@@ -7,22 +14,12 @@
 .card {
   margin-top: 20px;
   padding: 20px;
+  background-color: #161b22;
+  color: #e0e0e0;
 }
 
 h1 {
   color: #007bff;
-}
-
-body, html {
-  background-color: #121212 !important;
-  margin: 0;
-  padding: 0;
-  color: #e0e0e0;
-}
-
-.card {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
 }
 
 .card-title,
@@ -33,15 +30,19 @@ h4,
 }
 
 .table {
-  background-color: #2a2a2a;
+  background-color: #21262d;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  border-color: #333;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
-  background-color: #2e2e2e;
+  background-color: #2c313a;
 }
 
-.thead-dark th {
-  background-color: #343a40 !important;
+.thead-dark th,
+.table thead th {
+  background-color: #30363d !important;
   color: #ffffff !important;
 }
 
@@ -55,11 +56,11 @@ h4,
 
 .page-title {
   font-family: 'Roboto', sans-serif;
-  font-weight: 400; 
+  font-weight: 700;
   color: #e0e0e0;
-  margin-top: 50px; /* Adjust this value to your desired margin */
+  letter-spacing: 0.5px;
+  margin-top: 50px;
 }
-
 
 ngx-charts-bar-vertical-stacked,
 ngx-charts-pie-chart,
@@ -75,7 +76,7 @@ ngx-charts-advanced-pie-chart {
 }
 
 .tech-card {
-  background-color: var(--card-bg, #121417);
+  background-color: var(--card-bg, #0d1117);
   border-radius: 12px;
   border: none;
   box-shadow: 0 0 20px rgba(0,0,0,0.2);
@@ -86,17 +87,11 @@ ngx-charts-advanced-pie-chart {
   color: #00c8ff;
 }
 
-.page-title {
-  color: var(--text-color, #ffffff);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
 .btn-toggle-dark {
   font-weight: 500;
   border-radius: 6px;
   padding: 6px 12px;
-  background-color: #1f1f1f;
+  background-color: #0d1117;
   color: #eee;
   border: 1px solid #444;
 }
@@ -104,7 +99,7 @@ ngx-charts-advanced-pie-chart {
 .chart-card,
 .stat-card,
 .entries-card {
-  background: #1e1e1e;
+  background: #161b22;
   color: #eaeaea;
 }
 
@@ -134,19 +129,19 @@ ngx-charts-advanced-pie-chart {
 }
 
 .alert-filter {
-  background-color: #212529;
+  background-color: #161b22;
   color: #f8f9fa;
   border-left: 4px solid #0dcaf0;
 }
 
 .table-header th {
-  background-color: #343a40;
+  background-color: #30363d;
   color: white;
   font-weight: 500;
 }
 
 .entry-row:hover {
-  background-color: #2e2e2e;
+  background-color: #2c313a;
 }
 
 .empty-state {
@@ -168,61 +163,23 @@ ngx-charts-advanced-pie-chart {
 
 .table tbody tr td {
   color: #eaeaea;
-}
-
-.table thead th {
-  background-color: #2c2f33;
-  color: #ffffff;
-}
-
-.table {
-  background-color: #1e1e1e;
-  border-collapse: separate;
-  border-spacing: 0 4px;
-  border-color: #333;
-}
-
-.table th {
-  background-color: #2c2f33;
-  color: #f1f1f1;
-  font-weight: 600;
-  border-bottom: 1px solid #444;
-}
-
-.table td {
-  color: #e0e0e0;
-  background-color: #2a2a2a;
+  background-color: #21262d;
   vertical-align: middle;
   border-top: 1px solid #444;
 }
 
 .table tbody tr:hover td {
-  background-color: #3a3a3a;
+  background-color: #21262d;
   color: #ffffff;
   transition: background-color 0.2s ease;
 }
 
 .table tbody tr:nth-child(even) td {
-  background-color: #252525;
-}
-
-.heatmap-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16px, 1fr));
-  gap: 2px;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.heatmap-cell {
-  width: 100%;
-  padding-top: 100%; /* makes it a square */
-  border-radius: 3px;
-  transition: background 0.2s ease;
+  background-color: #161b22;
 }
 
 .pm-card {
-  background-color: #1f1f1f;
+  background-color: #0d1117;
   color: #f1f1f1;
 }
 
@@ -237,28 +194,22 @@ ngx-charts-advanced-pie-chart {
   max-height: 420px;
 }
 
-
-/* Ensure default text color */
 .chart-card .card-body h5,
 .chart-card .card-body p,
 .chart-card .card-body .legend-label text {
-color:  #ffffff !important;
+  color:  #ffffff !important;
 }
 
-/* Maintain text color on hover */
 .chart-card .card-body h5:hover,
 .chart-card .card-body p:hover,
 .chart-card .card-body .legend-label text:hover {
-color: #ffffff !important;
+  color: #ffffff !important;
 }
 
-
-
 ngx-charts-advanced-pie-chart text {
-  fill: #ffffff !important; /* Default text color */
-  }
-  
-  ngx-charts-advanced-pie-chart text:hover {
- fill: #ffffff !important; /* Maintain text color on hover */
-  }
-  
+  fill: #ffffff !important;
+}
+
+ngx-charts-advanced-pie-chart text:hover {
+  fill: #ffffff !important;
+}

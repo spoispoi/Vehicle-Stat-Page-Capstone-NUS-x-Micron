@@ -1,13 +1,23 @@
-// equip-statistics.component.ts
-import { Component, OnInit, Inject, PLATFORM_ID, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  Inject,
+  PLATFORM_ID,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { StatisticsService } from '../services/statistics.service';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import {
+  CommonModule,
+  isPlatformBrowser,
+  ViewportScroller,
+} from '@angular/common';
 import { NgxChartsModule } from '@swimlane/ngx-charts';
 import { Color, ScaleType, LegendPosition } from '@swimlane/ngx-charts';
 import { curveMonotoneX } from 'd3-shape';
-import { Renderer2 } from '@angular/core';
 
 interface Entry {
   state_in_date: string;
@@ -33,7 +43,7 @@ interface ErrorFrequency {
   standalone: true,
   imports: [RouterOutlet, NgxChartsModule, CommonModule],
 })
-export class EquipStatisticsComponent implements OnInit {
+export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   equipId: string = '';
   statistics: any = null;
   equipEntries: Entry[] = [];
@@ -43,15 +53,18 @@ export class EquipStatisticsComponent implements OnInit {
   entries: Entry[] = [];
   filteredEntries: Entry[] = [];
   legendPosition: LegendPosition = LegendPosition.Right;
-  lineChartData: { name: string; series: { name: string; value: number }[] }[] = [];
+  lineChartData: {
+    name: string;
+    series: { name: string; value: number }[];
+  }[] = [];
   curve = curveMonotoneX;
   selectedErrorName: string | null = null;
   heatmapData: { date: string; count: number }[] = [];
   errorByEquipData: { name: string; series: { name: string; value: number }[] }[] = [];
   pmEntries: Entry[] = [];
   pmCount: number = 0;
+
   @ViewChild('entriesSection') entriesSection!: ElementRef;
-  @ViewChild('topOfPage') topOfPage!: ElementRef
 
   colorScheme: Color = {
     name: 'techTransparent',
@@ -67,8 +80,8 @@ export class EquipStatisticsComponent implements OnInit {
       'rgba(149, 165, 166, 0.6)',
       'rgba(26, 188, 156, 0.6)',
       'rgba(127, 140, 141, 0.6)',
-      'rgba(44, 62, 80, 0.6)'
-    ]
+      'rgba(44, 62, 80, 0.6)',
+    ],
   };
 
   constructor(
@@ -76,7 +89,7 @@ export class EquipStatisticsComponent implements OnInit {
     private statisticsService: StatisticsService,
     private http: HttpClient,
     @Inject(PLATFORM_ID) private platformId: Object,
-    private renderer: Renderer2 
+    private viewportScroller: ViewportScroller
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -88,29 +101,25 @@ export class EquipStatisticsComponent implements OnInit {
       this.fetchStatistics(this.equipId);
       this.fetchEquipEntries(this.equipId);
       this.fetchStatisticsGraph(this.equipId);
-      
-
     }
-    
-    // Auto-scroll to the top when the page is visited
-    console.log('Attempting to scroll to top on page visit...');
-    if (this.topOfPage) {
-      this.topOfPage.nativeElement.scrollIntoView({ behavior: 'smooth' });
-      console.log('Scroll action triggered on page visit.');
-    } else {
-      console.error('topOfPage reference is not available.');
-    }
-  
-
   }
 
-  formatDate(dateString: string | null): string {
-    if (dateString) {
-      const date = new Date(dateString);
-      return date.toLocaleString();
-    }
-    return '';
+ ngAfterViewInit(): void {
+  if (this.isBrowser) {
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        const body = document.body;
+
+        console.log('[Scroll Fix] body.scrollTop before:', body.scrollTop);
+        body.scrollTo({ top: 0, behavior: 'smooth' });
+
+        setTimeout(() => {
+          console.log('[Scroll Fix] body.scrollTop after:', body.scrollTop);
+        }, 500);
+      });
+    }, 100); // small delay to wait for charts/data load
   }
+}
 
   fetchStatistics(equipId: string): void {
     this.statisticsService.getStatistics(equipId).subscribe(
@@ -124,29 +133,6 @@ export class EquipStatisticsComponent implements OnInit {
     );
   }
 
-  fetchEquipEntries(equipId: string): void {
-    console.log(`Fetching equipment entries for equipId: ${equipId}`);
-    this.http.get<Entry[]>(`/api/tools/?equip_id=${equipId}`).subscribe(
-      (data) => {
-        console.log('Fetched data:', data);
-        this.pmEntries = data.filter(e => e.error_name === 'Unknown');
-        this.pmCount = this.pmEntries.length;
-        this.entries = data.filter(e => e.error_name !== 'Unknown');
-        
-        // Sort the entries by state_in_date in descending order
-        this.filteredEntries = [...this.entries].sort((a, b) => new Date(b.state_in_date).getTime() - new Date(a.state_in_date).getTime());
-        console.log('Sorted filteredEntries:', this.filteredEntries);
-        
-        this.renderEquipEntries();
-        this.prepareErrorByEquipData();
-      },
-      (error) => {
-        console.error('Error fetching equipment entries:', error);
-      }
-    );
-  }
-  
-  
   populateStatistics(): void {
     if (this.isBrowser) {
       document.getElementById('most-common-event-code')!.textContent =
@@ -158,15 +144,36 @@ export class EquipStatisticsComponent implements OnInit {
     }
   }
 
+  fetchEquipEntries(equipId: string): void {
+    this.http
+      .get<Entry[]>(`/api/tools/?equip_id=${equipId}`)
+      .subscribe((data) => {
+        this.pmEntries = data.filter((e) => e.error_name === 'Unknown');
+        this.pmCount = this.pmEntries.length;
+        this.entries = data.filter((e) => e.error_name !== 'Unknown');
+
+        this.filteredEntries = [...this.entries].sort(
+          (a, b) =>
+            new Date(b.state_in_date).getTime() -
+            new Date(a.state_in_date).getTime()
+        );
+
+        this.renderEquipEntries();
+        this.prepareErrorByEquipData();
+      });
+  }
+
   renderEquipEntries(): void {
     if (this.isBrowser) {
       const container = document.getElementById('equip-entries-container');
       if (container) {
         container.innerHTML = '';
-  
-        // Sort the filteredEntries array by state_in_date in descending order
-        this.filteredEntries.sort((a, b) => new Date(b.state_in_date).getTime() - new Date(a.state_in_date).getTime());
-  
+        this.filteredEntries.sort(
+          (a, b) =>
+            new Date(b.state_in_date).getTime() -
+            new Date(a.state_in_date).getTime()
+        );
+
         this.filteredEntries.forEach((entry) => {
           const div = document.createElement('div');
           div.classList.add('equip-entry');
@@ -182,7 +189,7 @@ export class EquipStatisticsComponent implements OnInit {
       }
     }
   }
-  
+
   prepareErrorByEquipData(): void {
     const grouped: { [equip: string]: { [errorName: string]: number } } = {};
 
@@ -197,18 +204,12 @@ export class EquipStatisticsComponent implements OnInit {
       name: equip,
       series: Object.entries(errors).map(([errorName, count]) => ({
         name: errorName,
-        value: count
-      }))
+        value: count,
+      })),
     }));
   }
 
-  // fetchStatisticsGraph(equipId: string) {
-  //   this.statisticsService.getStatistics(equipId).subscribe((data: any) => {
-  //     this.transformData(data, 2024);
-  //   });
-  // }
-
-  fetchStatisticsGraph(equipId: string) {
+  fetchStatisticsGraph(equipId: string): void {
     this.statisticsService.getStatistics(equipId).subscribe((data: any) => {
       this.transformData(data);
     });
@@ -216,74 +217,76 @@ export class EquipStatisticsComponent implements OnInit {
 
   transformData(data: any) {
     if (!data.error_frequency || data.error_frequency.length === 0) return;
-  
+
     const allDates = data.error_frequency.map((item: any) => new Date(item.date));
     const minYear = Math.min(...allDates.map((d: Date) => d.getFullYear()));
     const maxYear = Math.max(...allDates.map((d: Date) => d.getFullYear()));
-  
+
     const dateRange: string[] = [];
-  
     for (let year = minYear; year <= maxYear; year++) {
       for (let month = 0; month < 12; month++) {
         const date = new Date(year, month, 1);
         dateRange.push(date.toISOString().split('T')[0]);
       }
     }
-  
+
     const errorFrequencyDict: { [key: string]: { [error: string]: number } } = {};
     const monthlyTotals: { [key: string]: number } = {};
     const dailyTotals: { [key: string]: number } = {};
-  
-    dateRange.forEach(d => errorFrequencyDict[d] = {});
-  
+
+    dateRange.forEach((d) => (errorFrequencyDict[d] = {}));
+
     for (const item of data.error_frequency) {
       if (item.error_name === 'Unknown') continue;
-  
+
       const fullDate = item.date.split('T')[0];
       const date = new Date(item.date);
-      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
-  
+      const monthStart = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        1
+      ).toISOString().split('T')[0];
+
       if (!errorFrequencyDict[monthStart][item.error_name]) {
         errorFrequencyDict[monthStart][item.error_name] = 0;
       }
-  
+
       errorFrequencyDict[monthStart][item.error_name] += item.count;
       monthlyTotals[monthStart] = (monthlyTotals[monthStart] || 0) + item.count;
       dailyTotals[fullDate] = (dailyTotals[fullDate] || 0) + item.count;
     }
-  
-    // Format monthly stacked bar chart
-// Format monthly stacked bar chart
-this.errorFrequencyData = dateRange.map((dateKey, i) => ({
-  name: this.getMonthYearLabel(i, minYear), // Use the month-year label for the name field
-  extra: { date: dateKey }, // Store the date information in an extra property
-  series: Object.entries(errorFrequencyDict[dateKey]).map(([error, count]) => ({
-    name: error,
-    value: count
-  }))
-}));
 
+    this.errorFrequencyData = dateRange.map((dateKey, i) => ({
+      name: this.getMonthYearLabel(i, minYear),
+      extra: { date: dateKey },
+      series: Object.entries(errorFrequencyDict[dateKey]).map(
+        ([error, count]) => ({
+          name: error,
+          value: count,
+        })
+      ),
+    }));
 
+    this.lineChartData = [
+      {
+        name: 'Total Errors',
+        series: dateRange.map((dateKey, i) => ({
+          name: this.getMonthYearLabel(i, minYear),
+          value: monthlyTotals[dateKey] || 0,
+        })),
+      },
+    ];
 
-    // Format total error line chart
-    this.lineChartData = [{
-      name: 'Total Errors',
-      series: dateRange.map((dateKey, i) => ({
-        name: this.getMonthYearLabel(i, minYear),
-        value: monthlyTotals[dateKey] || 0
-      }))
-    }];
-  
     this.errorNotesData = Object.keys(data.error_notes || {})
-      .filter(key => key !== 'Unknown')
-      .map(key => ({
+      .filter((key) => key !== 'Unknown')
+      .map((key) => ({
         name: key,
-        value: data.error_notes[key].length
+        value: data.error_notes[key].length,
       }));
-  
+
     this.heatmapData = Object.entries(dailyTotals).map(([date, count]) => ({
       date,
-      count
+      count,
     }));
   }
 
@@ -292,13 +295,22 @@ this.errorFrequencyData = dateRange.map((dateKey, i) => ({
     return date.toLocaleString('default', { month: 'short', year: 'numeric' });
   }
 
+  formatDate(dateString: string | null): string {
+    if (dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    }
+    return '';
+  }
+
   onErrorSelect(event: any) {
     this.selectedErrorName = event.name;
-    this.filteredEntries = this.entries.filter(entry => entry.error_name === event.name);
+    this.filteredEntries = this.entries.filter(
+      (entry) => entry.error_name === event.name
+    );
     this.renderEquipEntries();
 
-    // Smooth scroll to entries section
-    if (this.entriesSection && this.entriesSection.nativeElement) {
+    if (this.entriesSection?.nativeElement) {
       this.entriesSection.nativeElement.scrollIntoView({ behavior: 'smooth' });
     }
   }
@@ -308,138 +320,63 @@ this.errorFrequencyData = dateRange.map((dateKey, i) => ({
     this.filteredEntries = [...this.entries];
     this.renderEquipEntries();
 
-    // Print statements for debugging
-    console.log('Clearing filter...');
-    console.log('Filtered entries reset:', this.filteredEntries);
-
-    // Auto-scroll to the top using ViewChild
-    console.log('Attempting to scroll to top using ViewChild...');
-    if (this.topOfPage) {
-      this.topOfPage.nativeElement.scrollIntoView({ behavior: 'smooth' });
-      console.log('Scroll action triggered using ViewChild.');
-    } else {
-      console.error('topOfPage reference is not available.');
-    }
+    this.viewportScroller.scrollToPosition([0, 0]);
   }
-
-  
-
-  darkMode: boolean = false;
-
-  toggleDarkMode() {
-    this.darkMode = !this.darkMode;
-    const body = document.body;
-    const html = document.documentElement;
-
-    if (this.darkMode) {
-      body.classList.add('dark-mode-body');
-      html.classList.add('dark-mode-body');
-    } else {
-      body.classList.remove('dark-mode-body');
-      html.classList.remove('dark-mode-body');
-    }
-  }
-
-  formatXAxisTick = (val: string): string => {
-    // If it's already formatted like 'Sep 2024', just return it
-    if (!val.includes('-')) return val;
-  
-    // Else, parse and format properly
-    const [year, month] = val.split('-').map(Number);
-    const date = new Date(year, month - 1); // JS months are 0-indexed
-    return date.toLocaleString('default', { month: 'short', year: 'numeric' });
-  };
-  
-  formatDateTick = (date: Date): string => {
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      year: 'numeric',
-    });
-  };
 
   onMonthSelect(event: any): void {
-    console.log('Event data:', event);
-    const selectedDate = event.series; // Access the series property for the date information
-    console.log(`Selected date from chart: ${selectedDate}`);
-  
-    if (!selectedDate) {
-      console.error('Selected date is undefined');
-      return;
-    }
-  
-    // Ensure the selectedDate is in the correct format (e.g., 'Nov 2024')
-    const [month, year] = selectedDate.split(' ');
-    const monthIndex = new Date(Date.parse(month + " 1, 2020")).getMonth(); // Get month index from name
-    console.log(`Parsed month: ${month}, year: ${year}, monthIndex: ${monthIndex}`);
-  
-    // Filter entries based on the selected month and year
-    this.filteredEntries = this.entries.filter(entry => {
-      const entryDate = new Date(entry.state_in_date);
-      const isMatch = entryDate.getFullYear() === parseInt(year) && entryDate.getMonth() === monthIndex;
-      console.log(`Entry date: ${entry.state_in_date}, isMatch: ${isMatch}`);
-      return isMatch;
+    const [month, year] = event.series?.split(' ') ?? [];
+    const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
+
+    this.filteredEntries = this.entries.filter((entry) => {
+      const date = new Date(entry.state_in_date);
+      return (
+        date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
+      );
     });
-    console.log('Filtered entries:', this.filteredEntries);
-  
-    // Set the filter label
+
     this.selectedErrorName = `${month} ${year}`;
-  
-    // Render the filtered entries
     this.renderEquipEntries();
-  
-    // Smooth scroll to entries section
-    if (this.entriesSection && this.entriesSection.nativeElement) {
-      this.entriesSection.nativeElement.scrollIntoView({ behavior: 'smooth' });
-    }
+
+    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
   }
-  
 
   onTrendSelect(event: any): void {
-    console.log('Event data:', event);
-    const selectedDate = event.name; // Access the name property for the date information
-    console.log(`Selected date from chart: ${selectedDate}`);
-  
-    if (!selectedDate) {
-      console.error('Selected date is undefined');
-      return;
-    }
-  
-    // Ensure the selectedDate is in the correct format (e.g., 'Jan 2024')
-    const [month, year] = selectedDate.split(' ');
-    const monthIndex = new Date(Date.parse(month + " 1, 2020")).getMonth(); // Get month index from name
-    console.log(`Parsed month: ${month}, year: ${year}, monthIndex: ${monthIndex}`);
-  
-    // Filter entries based on the selected month and year
-    this.filteredEntries = this.entries.filter(entry => {
-      const entryDate = new Date(entry.state_in_date);
-      const isMatch = entryDate.getFullYear() === parseInt(year) && entryDate.getMonth() === monthIndex;
-      console.log(`Entry date: ${entry.state_in_date}, isMatch: ${isMatch}`);
-      return isMatch;
+    const [month, year] = event.name?.split(' ') ?? [];
+    const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
+
+    this.filteredEntries = this.entries.filter((entry) => {
+      const date = new Date(entry.state_in_date);
+      return (
+        date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
+      );
     });
-    console.log('Filtered entries:', this.filteredEntries);
-  
-    // Set the filter label
+
     this.selectedErrorName = `${month} ${year}`;
-  
-    // Render the filtered entries
     this.renderEquipEntries();
-  
-    // Smooth scroll to entries section
-    if (this.entriesSection && this.entriesSection.nativeElement) {
-      this.entriesSection.nativeElement.scrollIntoView({ behavior: 'smooth' });
-    }
-  }
-  
-  
-  
-  
 
-
-  getHeatmapColor(count: number): string {
-    if (count === 0) return '#2c2f36';
-    if (count <= 1) return '#375a7f';
-    if (count <= 3) return '#4a89dc';
-    if (count <= 6) return '#5bc0de';
-    return '#f39c12';
+    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
   }
+
+  // darkMode: boolean = false;
+
+  // toggleDarkMode() {
+  //   this.darkMode = !this.darkMode;
+  //   const body = document.body;
+  //   const html = document.documentElement;
+
+  //   if (this.darkMode) {
+  //     body.classList.add('dark-mode-body');
+  //     html.classList.add('dark-mode-body');
+  //   } else {
+  //     body.classList.remove('dark-mode-body');
+  //     html.classList.remove('dark-mode-body');
+  //   }
+  // }
+
+  formatXAxisTick = (val: string): string => {
+    if (!val.includes('-')) return val;
+    const [year, month] = val.split('-').map(Number);
+    const date = new Date(year, month - 1);
+    return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+  };
 }

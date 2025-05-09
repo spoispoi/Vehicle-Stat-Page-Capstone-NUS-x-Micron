@@ -1,9 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ToolService } from '../tool.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-tool-detail',
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './tool-detail.component.html',
   styleUrls: ['./tool-detail.component.css']
 })
