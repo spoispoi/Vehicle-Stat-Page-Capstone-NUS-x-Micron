@@ -395,21 +395,36 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
 
   onMonthSelect(event: any): void {
-    const [month, year] = event.series?.split(' ') ?? [];
-    const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
+    // A legend click event in ngx-charts often returns the series name as a string
+    if (typeof event === 'string') {
+      // This handles a legend click, filtering by the error name.
+      this.selectedErrorName = event;
+      this.filteredEntries = this.sortEntries(
+        this.entries.filter((entry) => entry.error_name === this.selectedErrorName)
+      );
+    } 
+    // A bar click event returns an object with details
+    else if (event.series) {
+      // This handles a bar click, filtering by the month.
+      const [month, year] = event.series?.split(' ') ?? [];
+      if (!month || !year) return; // Exit if parsing fails
 
-    this.filteredEntries = this.sortEntries(
-      this.entries.filter((entry) => {
-        const date = new Date(entry.state_in_date);
-        return (
-          date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
-        );
-      })
-    );
+      const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
 
-    this.selectedErrorName = `${month} ${year}`;
-    this.renderEquipEntries();
+      this.filteredEntries = this.sortEntries(
+        this.entries.filter((entry) => {
+          // Use UTC date parts to avoid timezone-related off-by-one errors
+          const date = new Date(entry.state_in_date);
+          return (
+            date.getUTCFullYear() === parseInt(year) && date.getUTCMonth() === monthIndex
+          );
+        })
+      );
+      // Set the filter description to the selected month
+      this.selectedErrorName = `Month: ${event.series}`;
+    }
 
+    // After filtering, scroll to the entries table for immediate feedback
     this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -427,7 +442,6 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     );
 
     this.selectedErrorName = `${month} ${year}`;
-    this.renderEquipEntries();
 
     this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
   }

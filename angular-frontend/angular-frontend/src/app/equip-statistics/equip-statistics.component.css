@@ -178,6 +178,12 @@ ngx-charts-advanced-pie-chart {
   background-color: #161b22;
 }
 
+.table-hover tbody tr:hover td,
+.table-hover tbody tr:hover th {
+  background-color: #444 !important; /* A light grey for visibility on dark backgrounds */
+  color: #fff !important; /* Ensure text remains white */
+}
+
 .pm-card {
   background-color: #0d1117;
   color: #f1f1f1;
@@ -215,3 +221,19 @@ ngx-charts-advanced-pie-chart text:hover {
 }
 
 /* Quick date range styles removed - now handled by date filter component */
+::ng-deep .advanced-pie-legend .legend-item .item-value,
+::ng-deep .advanced-pie-legend .legend-item .item-label,
+::ng-deep .advanced-pie-legend .legend-item .item-percent {
+  color: #fff !important;
+}
+
+/* Add a smooth transition and scaling effect on hover for the legend items */
+::ng-deep .advanced-pie-legend .legend-item {
+  transition: transform 0.2s ease-in-out;
+  margin: 4px 0 !important; /* Add vertical margin to prevent clipping on scale */
+}
+
+::ng-deep .advanced-pie-legend .legend-item:hover {
+  transform: scale(1.1); /* Just scale, no translate */
+}
+
