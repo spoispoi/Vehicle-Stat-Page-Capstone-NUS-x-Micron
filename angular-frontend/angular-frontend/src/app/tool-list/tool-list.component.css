@@ -274,6 +274,49 @@ g.axis line,
   font-weight: bold !important;
 }
 
+/* Top 10 Tool Styling */
+.top-10-tool {
+  border: 2px solid #ff6347 !important;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a1a1a 100%) !important;
+  box-shadow: 0 4px 15px rgba(255, 99, 71, 0.3) !important;
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+}
+
+.top-10-tool:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(255, 99, 71, 0.4) !important;
+}
+
+.top-10-badge {
+  background: linear-gradient(45deg, #ff6347, #ff4500);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 8px;
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.error-count {
+  font-weight: bold;
+  color: #ff6347;
+  font-size: 1.1em;
+}
+
+.top-10-tool .error-count {
+  color: #ff4500;
+  font-size: 1.2em;
+}
+
 .tool-list-scrollable {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

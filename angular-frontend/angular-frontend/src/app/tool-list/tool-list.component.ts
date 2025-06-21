@@ -46,6 +46,9 @@ export class ToolListComponent implements OnInit {
   earliestDate: string = '';
   isLoading: boolean = false;
 
+  // Top 10 equipment cache
+  top10EquipIds: string[] = [];
+
   errorToEquipMap: { [key: string]: { name: string; value: number }[] } = {};
   equipToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
   monthToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
@@ -148,10 +151,17 @@ export class ToolListComponent implements OnInit {
       }
     }
 
+    // Calculate top 10 equipment IDs once
+    const equipIdErrorCounts = this.calculateEquipIdErrorCounts(tools);
+    this.top10EquipIds = Object.entries(equipIdErrorCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([equipId]) => equipId);
+
     const groupedTools = this.groupToolsByEquipId(tools);
     this.tools = groupedTools;
     this.filteredTools = [...this.tools];
-    this.sortByEquipId();
+    this.sortByErrorCount();
 
     const errorCounts = this.calculateErrorCounts(tools);
     this.top10ErrorData = this.formatTop10ChartData(errorCounts);
@@ -172,7 +182,6 @@ export class ToolListComponent implements OnInit {
 
     this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5);
 
-    const equipIdErrorCounts = this.calculateEquipIdErrorCounts(tools);
     this.equipIdErrorData = this.formatEquipIdChartData(equipIdErrorCounts);
 
     // Limit to top 20 equipments
@@ -225,7 +234,7 @@ export class ToolListComponent implements OnInit {
   onSearch(event: Event): void {
     const searchTerm = (event.target as HTMLInputElement).value.trim().toLowerCase();
     this.filteredTools = this.tools.filter(tool => tool.equip_id.toLowerCase().includes(searchTerm));
-    this.sortByEquipId();
+    this.sortByErrorCount();
     //this.renderToolList();
   }
 
@@ -311,7 +320,8 @@ export class ToolListComponent implements OnInit {
         equip_id: equipId,
         most_recent_error: mostRecent.error_name,
         most_recent_date: this.formatDate(mostRecent.state_in_date),
-        top_error: topError
+        top_error: topError,
+        error_count: validErrors.length
       };
     }).filter(x => x !== null);
   }
@@ -461,5 +471,44 @@ export class ToolListComponent implements OnInit {
     const year = date.getFullYear();
     const month = ('0' + (date.getMonth() + 1)).slice(-2); // Add 1 to month since it's zero-indexed
     return `${year}-${month}`;
+  }
+
+  sortByErrorCount(): void {
+    // Sort tools: top 10 first (by error count), then alphabetically
+    this.tools.sort((a, b) => {
+      const aIsTop10 = this.top10EquipIds.includes(a.equip_id);
+      const bIsTop10 = this.top10EquipIds.includes(b.equip_id);
+      
+      if (aIsTop10 && !bIsTop10) return -1;
+      if (!aIsTop10 && bIsTop10) return 1;
+      
+      if (aIsTop10 && bIsTop10) {
+        // Both are top 10, sort by error count (descending)
+        return b.error_count - a.error_count;
+      }
+      
+      // Both are not top 10, sort alphabetically
+      return a.equip_id.localeCompare(b.equip_id);
+    });
+
+    this.filteredTools.sort((a, b) => {
+      const aIsTop10 = this.top10EquipIds.includes(a.equip_id);
+      const bIsTop10 = this.top10EquipIds.includes(b.equip_id);
+      
+      if (aIsTop10 && !bIsTop10) return -1;
+      if (!aIsTop10 && bIsTop10) return 1;
+      
+      if (aIsTop10 && bIsTop10) {
+        // Both are top 10, sort by error count (descending)
+        return b.error_count - a.error_count;
+      }
+      
+      // Both are not top 10, sort alphabetically
+      return a.equip_id.localeCompare(b.equip_id);
+    });
+  }
+
+  isTop10Tool(equipId: string): boolean {
+    return this.top10EquipIds.includes(equipId);
   }
 }
