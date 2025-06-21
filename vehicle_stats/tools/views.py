@@ -76,6 +76,7 @@ from django.db.models import Count, F, Max, Min
 from django.http import JsonResponse
 from datetime import datetime
 from django.utils.dateparse import parse_date
+from collections import Counter
 
 
 class ToolViewSet(viewsets.ModelViewSet):
@@ -173,34 +174,52 @@ def equipment_statistics(request, equip_id):
 
     print(f"Final queryset count: {queryset.count()}")
 
-    # Get the most common event code and error name
-    most_common_event_code = (
-        queryset
-        .exclude(event_code='Unknown')
-        .values('event_code')
-        .annotate(count=Count('event_code'))
-        .order_by('-count')
-        .first()
+    # To accurately count unique events, we define an event by a distinct combination
+    # of 'state_in_date' and 'event_code'.
+    
+    # Get a queryset of distinct events, keeping the fields needed for aggregation.
+    distinct_events_qs = queryset.values(
+        'state_in_date', 
+        'event_code',
+        'error_name'
+    ).distinct()
+    
+    # Since the Django ORM support for aggregations on distinct multi-column values is limited,
+    # we perform the counting for "most common" items in Python for accuracy.
+    # This is efficient enough for typical dashboard loads.
+    
+    # Find the most common error name from distinct events.
+    error_name_counts = Counter(
+        item['error_name'] 
+        for item in distinct_events_qs if item['error_name'] != 'Unknown'
     )
+    most_common_error_name_tuple = error_name_counts.most_common(1)
+    most_common_error_name = most_common_error_name_tuple[0][0] if most_common_error_name_tuple else None
 
-    most_common_error_name = (
-        queryset
-        .exclude(error_name='Unknown')
-        .values('error_name')
-        .annotate(count=Count('error_name'))
-        .order_by('-count')
-        .first()
+    # Find the most common event code from distinct events.
+    event_code_counts = Counter(
+        item['event_code'] 
+        for item in distinct_events_qs if item['event_code'] != 'Unknown'
     )
+    most_common_event_code_tuple = event_code_counts.most_common(1)
+    most_common_event_code = most_common_event_code_tuple[0][0] if most_common_event_code_tuple else None
 
-    print(f"Most common event code: {most_common_event_code}")
-    print(f"Most common error name: {most_common_error_name}")
+    print(f"Most common event code (distinct): {most_common_event_code}")
+    print(f"Most common error name (distinct): {most_common_error_name}")
 
-    # Aggregate general statistics
-    data = queryset.aggregate(
-        total_errors=Count('id'),
+    # Aggregate general statistics.
+    # Total errors are now the count of distinct events.
+    total_distinct_errors = distinct_events_qs.count()
+    
+    agg_data = queryset.aggregate(
         earliest_error_date=Min('state_in_date'),
         latest_error_date=Max('state_in_date'),
     )
+
+    data = {
+        "total_errors": total_distinct_errors,
+        **agg_data
+    }
 
     # Format the dates as strings
     if data['earliest_error_date']:
@@ -229,7 +248,7 @@ def equipment_statistics(request, equip_id):
     error_frequency = (
         queryset
         .values('state_in_date', 'error_name')
-        .annotate(count=Count('id'))
+        .annotate(count=Count('event_code', distinct=True))
         .order_by('state_in_date')
     )
 
@@ -245,18 +264,12 @@ def equipment_statistics(request, equip_id):
 
     # Add detailed statistics to the response
     data.update({
-        "most_common_event_code": most_common_event_code['event_code'] if most_common_event_code else None,
-        "most_common_error_name": most_common_error_name['error_name'] if most_common_error_name else None,
+        "most_common_event_code": most_common_event_code,
+        "most_common_error_name": most_common_error_name,
         "error_notes": formatted_error_notes,
         "error_frequency": formatted_error_frequency,
-        "date_filter": {
-            "start_date": start_date,
-            "end_date": end_date,
-            "applied": bool(start_date and start_date.strip() or end_date and end_date.strip())
-        }
     })
-
-    print(f"Response data keys: {list(data.keys())}")
+    
     print(f"Error frequency count: {len(formatted_error_frequency)}")
     print(f"Error notes count: {len(formatted_error_notes)}")
     print(f"Final response - most_common_event_code: {data.get('most_common_event_code')}")
