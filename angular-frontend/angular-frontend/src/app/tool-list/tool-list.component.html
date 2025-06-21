@@ -4,14 +4,33 @@
     
   </div>
 
-  <!-- Date Filter -->
-  <app-date-filter
-    [startDate]="startDate"
-    [endDate]="endDate"
-    [earliestDate]="earliestDate"
-    (dateRangeChange)="onDateRangeChange($event)"
-    (filterCleared)="onFilterCleared()">
-  </app-date-filter>
+  <div class="top-section-container">
+    <!-- Date Filter -->
+    <div class="date-filter-container">
+      <app-date-filter
+        [startDate]="startDate"
+        [endDate]="endDate"
+        [earliestDate]="earliestDate"
+        (dateRangeChange)="onDateRangeChange($event)"
+        (filterCleared)="onFilterCleared()">
+      </app-date-filter>
+    </div>
+
+    <!-- KPI Cards Section -->
+    <div class="kpi-container" *ngIf="!isLoading">
+      <div class="kpi-card">
+        <div class="kpi-label">Top Occurring Error</div>
+        <div class="kpi-value">{{ topOccurringErrorName }}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Top Occurring Equipment</div>
+        <div class="kpi-value">{{ topEquipment }}</div>
+        <div class="kpi-sub-value" *ngIf="topErrorForTopEquipment !== 'N/A'">
+          Top Error: {{ topErrorForTopEquipment }}
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Loading Indicator -->
   <div *ngIf="isLoading" class="text-center my-4">
@@ -42,38 +61,35 @@
       </div>
     </div>
     <div class="sidebar-list">
-      <h5 class="mt-4">Top 5 Summary</h5>
-      <ul class="list-group shadow-sm">
-        <li class="list-group-item bg-dark text-light border-secondary"
-            *ngFor="let item of top10ErrorData.slice(0, 5); let i = index"
-            (click)="toggleError(i)"
-            style="cursor: pointer;">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>{{ item.name }}</div>
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge bg-primary rounded-pill me-2">{{ item.value }}</span>
-              <span class="chevron-icon" [class.rotate]="expandedErrorIndex === i">⌄</span>
+      <h3 class="section-title">Top 5 Summary</h3>
+      <div class="accordion">
+        <div class="accordion-item" *ngFor="let item of top10ErrorData.slice(0, 5); let i = index">
+          <div class="accordion-header" (click)="toggleError(i)">
+            <div class="error-name">{{ item.name }}</div>
+            <div class="d-flex align-items-center">
+              <span class="badge error-count-badge">{{ item.value }}</span>
+              <span class="chevron-icon" [class.rotate]="expandedErrorIndex === i">▼</span>
             </div>
           </div>
-          <div *ngIf="expandedErrorIndex === i" class="mt-2 ps-3">
-            <small class="text-muted">Top Vehicles</small>
+          <div class="accordion-content" [@collapseAnimation]="expandedErrorIndex === i ? 'expanded' : 'collapsed'">
             <div *ngIf="errorRowLoading[item.name]" class="text-center my-2">
               <div class="spinner-border text-primary spinner-border-sm" role="status">
                 <span class="visually-hidden">Loading...</span>
               </div>
             </div>
-            <ul class="list-unstyled ms-2"
+            <ul class="list-unstyled ms-2 vehicle-list"
                 *ngIf="!errorRowLoading[item.name] && (errorToEquipMap[item.name]?.length || 0) > 0; else noVehicles">
               <li *ngFor="let sub of errorToEquipMap[item.name]">
-                ▸ {{ sub.name }} <span class="badge bg-secondary">{{ sub.value }}</span>
+                <span class="vehicle-name">▸ {{ sub.name }}</span>
+                <span class="badge vehicle-count-badge">{{ sub.value }}</span>
               </li>
             </ul>
             <ng-template #noVehicles>
               <p class="text-muted small ms-2">No matching data found.</p>
             </ng-template>
           </div>
-        </li>
-      </ul>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -101,38 +117,35 @@
   </div>
 
   <div class="sidebar-list">
-    <h5 class="mt-4">Top 5 Equipment</h5>
-    <ul class="list-group shadow-sm">
-      <li class="list-group-item bg-dark text-light border-secondary"
-          *ngFor="let item of top20Equipments.slice(0, 5); let i = index"
-          (click)="toggleEquip(i)"
-          style="cursor: pointer;">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>{{ item.name }}</div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-success rounded-pill me-2">{{ item.value }}</span>
-            <span class="chevron-icon" [class.rotate]="expandedEquipIndex === i">⌄</span>
+    <h3 class="section-title">Top 5 Equipment</h3>
+    <div class="accordion">
+      <div class="accordion-item" *ngFor="let item of top20Equipments.slice(0, 5); let i = index">
+        <div class="accordion-header" (click)="toggleEquip(i)">
+          <div class="error-name">{{ item.name }}</div>
+          <div class="d-flex align-items-center">
+            <span class="badge error-count-badge">{{ item.value }}</span>
+            <span class="chevron-icon" [class.rotate]="expandedEquipIndex === i">▼</span>
           </div>
         </div>
-        <div *ngIf="expandedEquipIndex === i" class="mt-2 ps-3">
-          <small class="text-muted">Top Errors</small>
+        <div class="accordion-content" [@collapseAnimation]="expandedEquipIndex === i ? 'expanded' : 'collapsed'">
           <div *ngIf="equipRowLoading[item.name]" class="text-center my-2">
             <div class="spinner-border text-success spinner-border-sm" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
           </div>
-          <ul class="list-unstyled ms-2"
+          <ul class="list-unstyled ms-2 vehicle-list"
               *ngIf="!equipRowLoading[item.name] && (equipToErrorMap[item.name]?.length || 0) > 0; else noEquipErrors">
             <li *ngFor="let sub of equipToErrorMap[item.name]">
-              ▸ {{ sub.name }} <span class="badge bg-secondary">{{ sub.value }}</span>
+              <span class="vehicle-name">▸ {{ sub.name }}</span>
+              <span class="badge vehicle-count-badge">{{ sub.value }}</span>
             </li>
           </ul>
           <ng-template #noEquipErrors>
             <p class="text-muted small ms-2">No matching errors found.</p>
           </ng-template>
         </div>
-      </li>
-    </ul>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -158,38 +171,35 @@
     </div>
   </div>
   <div class="sidebar-list">
-    <h5 class="mt-4">Top 5 Months</h5>
-    <ul class="list-group shadow-sm">
-      <li class="list-group-item bg-dark text-light border-secondary"
-          *ngFor="let item of top5Months; let i = index"
-          (click)="toggleMonth(i)"
-          style="cursor: pointer;">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>{{ item.name }}</div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-warning rounded-pill me-2">{{ item.value }}</span>
-            <span class="chevron-icon" [class.rotate]="expandedMonthIndex === i">⌄</span>
+    <h3 class="section-title">Top 5 Months</h3>
+    <div class="accordion">
+      <div class="accordion-item" *ngFor="let item of top5Months; let i = index">
+        <div class="accordion-header" (click)="toggleMonth(i)">
+          <div class="error-name">{{ item.name }}</div>
+          <div class="d-flex align-items-center">
+            <span class="badge error-count-badge">{{ item.value }}</span>
+            <span class="chevron-icon" [class.rotate]="expandedMonthIndex === i">▼</span>
           </div>
         </div>
-        <div *ngIf="expandedMonthIndex === i" class="mt-2 ps-3">
-          <small class="text-muted">Top Errors</small>
+        <div class="accordion-content" [@collapseAnimation]="expandedMonthIndex === i ? 'expanded' : 'collapsed'">
           <div *ngIf="monthRowLoading[item.name]" class="text-center my-2">
             <div class="spinner-border text-warning spinner-border-sm" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
           </div>
-          <ul class="list-unstyled ms-2"
+          <ul class="list-unstyled ms-2 vehicle-list"
               *ngIf="!monthRowLoading[item.name] && (monthToErrorMap[item.name]?.length || 0) > 0; else noMonthErrors">
             <li *ngFor="let sub of monthToErrorMap[item.name]">
-              ▸ {{ sub.name }} <span class="badge bg-secondary">{{ sub.value }}</span>
+              <span class="vehicle-name">▸ {{ sub.name }}</span>
+              <span class="badge vehicle-count-badge">{{ sub.value }}</span>
             </li>
           </ul>
           <ng-template #noMonthErrors>
             <p class="text-muted small ms-2">No matching data found.</p>
           </ng-template>
         </div>
-      </li>
-    </ul>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -215,25 +225,28 @@
     </div>
   </div>
   <div class="sidebar-list">
-    <h5 class="mt-4">Filter Errors for Error Trend</h5>
-    <div class="dropdown">
-      <button class="btn btn-outline-primary dropdown-toggle w-100" type="button"
-              (click)="showDropdown = !showDropdown">
-        Select Errors
+    <h3 class="section-title">Filter Errors for Error Trend</h3>
+    <div class="custom-dropdown">
+      <button class="dropdown-toggle-button" (click)="showDropdown = !showDropdown">
+        <span>Select Errors</span>
+        <span class="chevron-icon" [class.rotate]="showDropdown">▼</span>
       </button>
-      <div class="dropdown-menu show shadow-sm" *ngIf="showDropdown">
-        <div class="px-3 py-2 small" style="max-height: 200px; overflow-y: auto;">
-          <input type="text" class="form-control mb-2" placeholder="Search Errors" (input)="onSearchError($event)" />
-          <div class="form-check" *ngFor="let error of filteredErrorTypes">
-            <input class="form-check-input" type="checkbox"
+      <div class="dropdown-content" [@collapseAnimation]="showDropdown ? 'expanded' : 'collapsed'">
+        <div class="dropdown-search">
+          <input type="text" class="form-control" placeholder="Search Errors" (input)="onSearchError($event)" />
+        </div>
+        <div class="error-list">
+          <div class="form-check" *ngFor="let error of filteredErrorTypes; let i = index">
+            <input class="form-check-input" type="checkbox" [id]="'error-' + i"
                    [checked]="selectedErrorTypes.includes(error)"
                    (change)="onErrorTypeToggle(error)">
-            <label class="form-check-label">{{ error }}</label>
+            <label class="form-check-label" [for]="'error-' + i">{{ error }}</label>
           </div>
         </div>
-        <div class="dropdown-divider"></div>
-        <button class="btn btn-sm btn-outline-danger w-100 mb-1" (click)="clearAllErrors()">Unselect All</button>
-        <button class="btn btn-sm btn-outline-success w-100" (click)="selectTopErrors()">Select Top 5</button>
+        <div class="dropdown-actions">
+          <button class="btn btn-action btn-danger" (click)="clearAllErrors()">Unselect All</button>
+          <button class="btn btn-action btn-success" (click)="selectTopErrors()">Select Top 5</button>
+        </div>
       </div>
     </div>
   </div>
@@ -268,3 +281,5 @@
     </div>
   </div>
 </div>
+
+

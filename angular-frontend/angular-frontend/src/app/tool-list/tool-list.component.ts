@@ -65,6 +65,11 @@ export class ToolListComponent implements OnInit {
   top5Months: any[] = [];
   top20Equipments: any[] = [];
 
+  // KPI Properties
+  topOccurringErrorName: string = 'N/A';
+  topEquipment: string = 'N/A';
+  topErrorForTopEquipment: string = 'N/A';
+
 
 
   isDarkMode: boolean = false;
@@ -129,6 +134,36 @@ export class ToolListComponent implements OnInit {
     });
   }
 
+  private calculateKpiData(tools: any[], errorCounts: { [key: string]: number }, equipIdErrorCounts: { [key: string]: number }): void {
+    // Top Occurring Error
+    if (Object.keys(errorCounts).length > 0) {
+      this.topOccurringErrorName = Object.entries(errorCounts).sort((a, b) => b[1] - a[1])[0][0];
+    } else {
+      this.topOccurringErrorName = 'N/A';
+    }
+
+    // Top Occurring Equipment and its top error
+    if (Object.keys(equipIdErrorCounts).length > 0) {
+      this.topEquipment = Object.entries(equipIdErrorCounts).sort((a, b) => b[1] - a[1])[0][0];
+      
+      const topEquipmentErrors = tools.filter(t => t.equip_id === this.topEquipment && t.error_name && t.error_name !== 'Unknown');
+      
+      if (topEquipmentErrors.length > 0) {
+        const errorCountsForTopEquip: { [key: string]: number } = {};
+        topEquipmentErrors.forEach(t => {
+          errorCountsForTopEquip[t.error_name] = (errorCountsForTopEquip[t.error_name] || 0) + 1;
+        });
+        this.topErrorForTopEquipment = Object.entries(errorCountsForTopEquip).sort((a, b) => b[1] - a[1])[0][0];
+      } else {
+        this.topErrorForTopEquipment = 'N/A';
+      }
+
+    } else {
+      this.topEquipment = 'N/A';
+      this.topErrorForTopEquipment = 'N/A';
+    }
+  }
+
   onDateRangeChange(dateRange: DateRange): void {
     this.startDate = dateRange.startDate;
     this.endDate = dateRange.endDate;
@@ -151,8 +186,12 @@ export class ToolListComponent implements OnInit {
       }
     }
 
-    // Calculate top 10 equipment IDs once
     const equipIdErrorCounts = this.calculateEquipIdErrorCounts(tools);
+    const errorCounts = this.calculateErrorCounts(tools);
+
+    this.calculateKpiData(tools, errorCounts, equipIdErrorCounts);
+
+    // Calculate top 10 equipment IDs once
     this.top10EquipIds = Object.entries(equipIdErrorCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
@@ -163,7 +202,6 @@ export class ToolListComponent implements OnInit {
     this.filteredTools = [...this.tools];
     this.sortByErrorCount();
 
-    const errorCounts = this.calculateErrorCounts(tools);
     this.top10ErrorData = this.formatTop10ChartData(errorCounts);
 
     this.colorSchemeTopCount.domain = this.top10ErrorData.map((item, index) => 
@@ -328,7 +366,11 @@ export class ToolListComponent implements OnInit {
 
   calculateErrorCounts(tools: any[]): { [key: string]: number } {
     const counts: { [key: string]: number } = {};
-    tools.forEach(t => counts[t.error_name] = (counts[t.error_name] || 0) + 1);
+    tools.forEach(t => {
+      if (t.error_name && t.error_name !== 'Unknown') {
+        counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+      }
+    });
     return counts;
   }
 
