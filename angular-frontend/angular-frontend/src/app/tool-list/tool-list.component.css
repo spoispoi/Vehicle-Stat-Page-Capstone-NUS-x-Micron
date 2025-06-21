@@ -211,11 +211,10 @@ g.axis line,
 
 .flex-row-scroll {
   display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-  margin-bottom: 3rem;
   align-items: flex-start;
-  margin: 20px 0;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  flex-wrap: nowrap;
 }
 
 .scroll-chart {
@@ -255,6 +254,24 @@ g.axis line,
 ::ng-deep .gridline-path {
   stroke: #444c56 !important;
   stroke-width: 1 !important;
+}
+
+::ng-deep .ngx-charts .bar-label, 
+::ng-deep .ngx-charts .data-label {
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+  font-weight: bold !important;
+}
+
+/* White labels for charts */
+.white-labels ::ng-deep .ngx-charts text {
+  fill: white !important;
+  font-weight: bold !important;
+}
+
+.white-labels ::ng-deep .ngx-charts .data-label {
+  fill: white !important;
+  font-weight: bold !important;
 }
 
 .tool-list-scrollable {

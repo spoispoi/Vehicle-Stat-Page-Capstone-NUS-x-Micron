@@ -213,3 +213,5 @@ ngx-charts-advanced-pie-chart text {
 ngx-charts-advanced-pie-chart text:hover {
   fill: #ffffff !important;
 }
+
+/* Quick date range styles removed - now handled by date filter component */

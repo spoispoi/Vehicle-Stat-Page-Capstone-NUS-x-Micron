@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -10,8 +10,18 @@ export class ToolService {
 
   constructor(private http: HttpClient) {}
 
-  getTools(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
+  getTools(startDate?: string, endDate?: string): Observable<any[]> {
+    let params = new HttpParams();
+    
+    if (startDate) {
+      params = params.set('start_date', startDate);
+    }
+    
+    if (endDate) {
+      params = params.set('end_date', endDate);
+    }
+    
+    return this.http.get<any[]>(this.apiUrl, { params });
   }
 
   getTool(id: number): Observable<any> {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable({
@@ -11,12 +11,28 @@ export class StatisticsService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Fetch statistics for a specific equipment ID.
+   * Fetch statistics for a specific equipment ID with optional date filtering.
    * @param equipId - The equipment ID to fetch statistics for.
+   * @param startDate - Optional start date for filtering (YYYY-MM-DD format).
+   * @param endDate - Optional end date for filtering (YYYY-MM-DD format).
    * @returns Observable of the statistics data.
    */
-  getStatistics(equipId: string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${equipId}/`);
+  getStatistics(equipId: string, startDate?: string, endDate?: string): Observable<any> {
+    let params = new HttpParams();
+    
+    if (startDate) {
+      params = params.set('start_date', startDate);
+    }
+    
+    if (endDate) {
+      params = params.set('end_date', endDate);
+    }
+    
+    const url = `${this.baseUrl}/${equipId}/`;
+    console.log('Statistics service - URL:', url);
+    console.log('Statistics service - Params:', params.toString());
+    
+    return this.http.get<any>(url, { params });
   }
 
 

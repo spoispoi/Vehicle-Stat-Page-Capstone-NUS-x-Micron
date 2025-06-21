@@ -1,0 +1,42 @@
+<div class="date-filter-container">
+  <div class="card filter-card">
+    <div class="card-body">
+      <h6 class="filter-title">📅 Date Filter</h6>
+      
+      <!-- Status Alert -->
+      <div *ngIf="isFilterApplied || earliestDate" class="alert" [ngClass]="{'alert-info': isFilterApplied, 'alert-success': !isFilterApplied}">
+        <div *ngIf="isFilterApplied">{{ getFilterDescription() }}</div>
+        <div *ngIf="!isFilterApplied">
+          Showing all data
+          <div *ngIf="earliestDate"><small>from: {{ formatDate(earliestDate) }}</small></div>
+        </div>
+      </div>
+
+      <!-- Quick Ranges -->
+      <div class="quick-ranges-grid">
+        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('all')">All Time</button>
+        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('week')">Last Week</button>
+        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('month')">Last Month</button>
+        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('quarter')">3 Months</button>
+        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('year')">1 Year</button>
+      </div>
+      
+      <!-- Custom Controls Row -->
+      <div class="custom-controls-row">
+        <div class="date-input-group">
+          <label for="startDate" class="form-label">Start Date</label>
+          <input type="date" id="startDate" class="form-control form-control-sm" [value]="startDate" (change)="onStartDateChange($event)">
+        </div>
+        <div class="date-input-group">
+          <label for="endDate" class="form-label">End Date</label>
+          <input type="date" id="endDate" class="form-control form-control-sm" [value]="endDate" (change)="onEndDateChange($event)">
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary btn-sm" (click)="applyFilter()" [disabled]="!hasValidDates()">Apply</button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="clearFilter()">Clear</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div> 

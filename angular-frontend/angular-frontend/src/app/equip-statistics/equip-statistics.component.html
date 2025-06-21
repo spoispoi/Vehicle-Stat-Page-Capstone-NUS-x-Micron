@@ -10,17 +10,48 @@
     </div>
   </div>
 
+  <!-- Date Filter -->
+  <app-date-filter
+    [startDate]="startDate"
+    [endDate]="endDate"
+    [earliestDate]="statistics?.earliest_error_date || ''"
+    (dateRangeChange)="onDateRangeChange($event)"
+    (filterCleared)="onFilterCleared()">
+  </app-date-filter>
+
+  <!-- Loading Indicator -->
+  <div *ngIf="isLoading" class="text-center my-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading statistics...</p>
+  </div>
+
   <!-- Overview Cards -->
-  <div class="row g-4">
-    <div class="col-md-3" *ngFor="let stat of [
-      { label: 'Most Common Event Code', id: 'most-common-event-code' },
-      { label: 'Most Common Error Name', id: 'most-common-error-name' },
-      { label: 'Latest Error Date', id: 'latest-error-date' }
-    ]">
+  <div class="row g-4" *ngIf="!isLoading">
+    <div class="col-md-3">
       <div class="card stat-card">
         <div class="card-body">
-          <h6 class="stat-label">{{ stat.label }}</h6>
-          <div class="stat-value" [id]="stat.id"></div>
+          <h6 class="stat-label">Most Common Event Code</h6>
+          <div class="stat-value">{{ statistics?.most_common_event_code || 'N/A' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="stat-label">Most Common Error Name</h6>
+          <div class="stat-value">{{ statistics?.most_common_error_name || 'N/A' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card stat-card">
+        <div class="card-body">
+          <h6 class="stat-label">Latest Error Date</h6>
+          <div class="stat-value">{{ formatDate(statistics?.latest_error_date) || 'N/A' }}</div>
         </div>
       </div>
     </div>
@@ -37,30 +68,22 @@
   </div>
 
   <!-- Charts Section -->
-  
-
-
-
-<!-- Error Distribution -->
-<div class="row g-4 mt-4 justify-content-center">
-    <div class="col-12">
-      <div class="card chart-card">
-        <div class="card-body">
-          <h5 class="chart-title">🎯 Error Distribution</h5>
-          <ngx-charts-advanced-pie-chart
-            [results]="errorNotesData"
-            [gradient]="true"
-            (select)="onErrorSelect($event)">
-          </ngx-charts-advanced-pie-chart>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  
-  
-  
-
+  <div *ngIf="!isLoading">
+    <!-- Error Distribution -->
+    <div class="row g-4 mt-4 justify-content-center">
+      <div class="col-12">
+        <div class="card chart-card">
+          <div class="card-body">
+            <h5 class="chart-title">🎯 Error Distribution</h5>
+            <ngx-charts-advanced-pie-chart
+              [results]="errorNotesData"
+              [gradient]="true"
+              (select)="onErrorSelect($event)">
+            </ngx-charts-advanced-pie-chart>
+          </div>
+        </div>
+      </div>
+    </div>
     
     <div class="row g-4 mt-4">
       <!-- Error Trend Line -->
@@ -111,21 +134,18 @@
         </div>
       </div>
     </div>
-    
-
-    
-
- <!-- Filter Alert -->
-<div *ngIf="selectedErrorName" class="alert alert-filter mt-5 d-flex justify-content-between align-items-center px-4 py-3 rounded">
-  <div>
-    🔍 <strong>Filtered by:</strong> <span class="text-highlight">{{ selectedErrorName }}</span>
   </div>
-  <button class="btn btn-sm btn-outline-light" (click)="clearErrorFilter()">✖ Clear Filter</button>
-</div>
 
+  <!-- Filter Alert -->
+  <div *ngIf="selectedErrorName" class="alert alert-filter mt-5 d-flex justify-content-between align-items-center px-4 py-3 rounded">
+    <div>
+      🔍 <strong>Filtered by:</strong> <span class="text-highlight">{{ selectedErrorName }}</span>
+    </div>
+    <button class="btn btn-sm btn-outline-light" (click)="clearErrorFilter()">✖ Clear Filter</button>
+  </div>
 
   <!-- Entries Table -->
-  <div class="row mt-4" id="entries-section" #entriesSection>
+  <div class="row mt-4" id="entries-section" #entriesSection *ngIf="!isLoading">
     <div class="col-12">
       <div class="card entries-card">
         <div class="card-body">
@@ -162,7 +182,7 @@
   </div>
 
   <!-- PM Entries Table -->
-  <div class="row mt-4">
+  <div class="row mt-4" *ngIf="!isLoading">
     <div class="col-12">
       <div class="card entries-card ">
         <div class="card-body">
@@ -198,6 +218,6 @@
 
   <!-- Back Button -->
   <div class="text-center mt-5">
-    <button class="btn btn-outline-accent fw-semibold px-4" onclick="window.history.back()">⬅ Back to Tool List</button>
+    <button class="btn btn-outline-secondary" onclick="window.history.back()">⬅ Back to Tool List</button>
   </div>
 </div>

@@ -75,6 +75,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, F, Max, Min
 from django.http import JsonResponse
 from datetime import datetime
+from django.utils.dateparse import parse_date
 
 
 class ToolViewSet(viewsets.ModelViewSet):
@@ -87,33 +88,115 @@ class ToolViewSet(viewsets.ModelViewSet):
     filterset_fields = ['equip_id']  # Allow filtering by equip_id
     search_fields = ['equip_id']  # Allow searching by equip_id
 
+    def get_queryset(self):
+        queryset = Tool.objects.all()
+        
+        # Get date filter parameters
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        equip_id = self.request.query_params.get('equip_id')
+        
+        print(f"ToolViewSet - equip_id: {equip_id}, start_date: {start_date}, end_date: {end_date}")
+        
+        # Apply equipment filter if provided
+        if equip_id:
+            queryset = queryset.filter(equip_id=equip_id)
+            print(f"Applied equipment filter: {equip_id}")
+        
+        # Apply date filters if provided
+        if start_date:
+            try:
+                start_date_obj = parse_date(start_date)
+                if start_date_obj:
+                    queryset = queryset.filter(state_in_date__date__gte=start_date_obj)
+                    print(f"Applied start date filter: {start_date_obj}")
+            except ValueError:
+                print(f"Invalid start date format: {start_date}")
+                pass
+        
+        if end_date:
+            try:
+                end_date_obj = parse_date(end_date)
+                if end_date_obj:
+                    queryset = queryset.filter(state_in_date__date__lte=end_date_obj)
+                    print(f"Applied end date filter: {end_date_obj}")
+            except ValueError:
+                print(f"Invalid end date format: {end_date}")
+                pass
+        
+        print(f"ToolViewSet final queryset count: {queryset.count()}")
+        if queryset.count() > 0:
+            print(f"Sample tool data: {queryset.first().__dict__}")
+        
+        return queryset
+
 
 def equipment_statistics(request, equip_id):
+    print(f"Equipment statistics called for equip_id: {equip_id}")
+    print(f"Request method: {request.method}")
+    print(f"Request GET params: {request.GET}")
+    
     # Check if the equipment exists
     if not Tool.objects.filter(equip_id=equip_id).exists():
+        print(f"Equipment {equip_id} not found")
         return JsonResponse({"error": "Equipment not found"}, status=404)
+
+    # Get date filter parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    print(f"Date filters - start_date: {start_date}, end_date: {end_date}")
+    
+    # Build base queryset
+    queryset = Tool.objects.filter(equip_id=equip_id)
+    print(f"Base queryset count: {queryset.count()}")
+    
+    # Apply date filters if provided
+    if start_date and start_date.strip():
+        try:
+            start_date_obj = parse_date(start_date)
+            if start_date_obj:
+                queryset = queryset.filter(state_in_date__date__gte=start_date_obj)
+                print(f"Applied start date filter: {start_date_obj}")
+        except ValueError:
+            print(f"Invalid start date format: {start_date}")
+            pass
+    
+    if end_date and end_date.strip():
+        try:
+            end_date_obj = parse_date(end_date)
+            if end_date_obj:
+                queryset = queryset.filter(state_in_date__date__lte=end_date_obj)
+                print(f"Applied end date filter: {end_date_obj}")
+        except ValueError:
+            print(f"Invalid end date format: {end_date}")
+            pass
+
+    print(f"Final queryset count: {queryset.count()}")
 
     # Get the most common event code and error name
     most_common_event_code = (
-    Tool.objects.filter(equip_id=equip_id)
-    .exclude(event_code='Unknown')
-    .values('event_code')
-    .annotate(count=Count('event_code'))
-    .order_by('-count')
-    .first()
-)
+        queryset
+        .exclude(event_code='Unknown')
+        .values('event_code')
+        .annotate(count=Count('event_code'))
+        .order_by('-count')
+        .first()
+    )
 
     most_common_error_name = (
-    Tool.objects.filter(equip_id=equip_id)
-    .exclude(error_name='Unknown')
-    .values('error_name')
-    .annotate(count=Count('error_name'))
-    .order_by('-count')
-    .first()
-)
+        queryset
+        .exclude(error_name='Unknown')
+        .values('error_name')
+        .annotate(count=Count('error_name'))
+        .order_by('-count')
+        .first()
+    )
+
+    print(f"Most common event code: {most_common_event_code}")
+    print(f"Most common error name: {most_common_error_name}")
 
     # Aggregate general statistics
-    data = Tool.objects.filter(equip_id=equip_id).aggregate(
+    data = queryset.aggregate(
         total_errors=Count('id'),
         earliest_error_date=Min('state_in_date'),
         latest_error_date=Max('state_in_date'),
@@ -125,9 +208,11 @@ def equipment_statistics(request, equip_id):
     if data['latest_error_date']:
         data['latest_error_date'] = data['latest_error_date'].strftime('%Y-%m-%d %H:%M:%S')
 
+    print(f"Aggregated data: {data}")
+
     # Collect error notes grouped by error name
     error_notes = (
-        Tool.objects.filter(equip_id=equip_id)
+        queryset
         .values('error_name', 'error_description')
         .annotate(note_count=Count('error_description'))
     )
@@ -142,7 +227,7 @@ def equipment_statistics(request, equip_id):
 
     # Get error frequency data along with error names occurring on the same date
     error_frequency = (
-        Tool.objects.filter(equip_id=equip_id)
+        queryset
         .values('state_in_date', 'error_name')
         .annotate(count=Count('id'))
         .order_by('state_in_date')
@@ -164,7 +249,19 @@ def equipment_statistics(request, equip_id):
         "most_common_error_name": most_common_error_name['error_name'] if most_common_error_name else None,
         "error_notes": formatted_error_notes,
         "error_frequency": formatted_error_frequency,
+        "date_filter": {
+            "start_date": start_date,
+            "end_date": end_date,
+            "applied": bool(start_date and start_date.strip() or end_date and end_date.strip())
+        }
     })
+
+    print(f"Response data keys: {list(data.keys())}")
+    print(f"Error frequency count: {len(formatted_error_frequency)}")
+    print(f"Error notes count: {len(formatted_error_notes)}")
+    print(f"Final response - most_common_event_code: {data.get('most_common_event_code')}")
+    print(f"Final response - most_common_error_name: {data.get('most_common_error_name')}")
+    print(f"Final response - latest_error_date: {data.get('latest_error_date')}")
 
     return JsonResponse(data)
 

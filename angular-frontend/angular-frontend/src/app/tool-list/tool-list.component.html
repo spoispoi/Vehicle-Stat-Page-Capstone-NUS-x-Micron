@@ -3,63 +3,83 @@
     <h1 class="header-title flex-grow-1" style="color: #f0f6fc;">Vehicle Statistics Page</h1>
     
   </div>
+
+  <!-- Date Filter -->
+  <app-date-filter
+    [startDate]="startDate"
+    [endDate]="endDate"
+    [earliestDate]="earliestDate"
+    (dateRangeChange)="onDateRangeChange($event)"
+    (filterCleared)="onFilterCleared()">
+  </app-date-filter>
+
+  <!-- Loading Indicator -->
+  <div *ngIf="isLoading" class="text-center my-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2 text-muted">Loading data...</p>
+  </div>
    
   <!-- Section: Top 10 Errors -->
-<div class="flex-row-scroll">
-  <div class="scroll-chart">
-    <h3 class="section-title">Top 10 Errors</h3>
-    <div class="scroll-container">
-      <ngx-charts-bar-horizontal
-        [view]="[1200, 500]"
-        [scheme]="colorSchemeTopCount"
-        [results]="top10ErrorData"
-        [xAxis]="true"
-        [yAxis]="true"
-        [xAxisLabel]="'Error Count'"
-        [yAxisLabel]="'Error Type'"
-        [legend]="false">
-      </ngx-charts-bar-horizontal>
+  <div class="flex-row-scroll mt-5" *ngIf="!isLoading">
+    <div class="scroll-chart">
+      <h3 class="section-title">Top 10 Errors</h3>
+      <div class="scroll-container">
+        <ngx-charts-bar-horizontal
+          [view]="[1200, 500]"
+          [scheme]="colorSchemeTopCount"
+          [results]="top10ErrorData"
+          [xAxis]="true"
+          [yAxis]="true"
+          [xAxisLabel]="'Error Count'"
+          [yAxisLabel]="'Error Type'"
+          [legend]="false"
+          [showDataLabel]="true"
+          [trimYAxisTicks]="false"
+          class="white-labels">
+        </ngx-charts-bar-horizontal>
+      </div>
     </div>
-  </div>
-  <div class="sidebar-list">
-    <h5 class="mt-4">Top 5 Summary</h5>
-    <ul class="list-group shadow-sm">
-      <li class="list-group-item bg-dark text-light border-secondary"
-          *ngFor="let item of top10ErrorData.slice(0, 5); let i = index"
-          (click)="toggleError(i)"
-          style="cursor: pointer;">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>{{ item.name }}</div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary rounded-pill me-2">{{ item.value }}</span>
-            <span class="chevron-icon" [class.rotate]="expandedErrorIndex === i">⌄</span>
-          </div>
-        </div>
-        <div *ngIf="expandedErrorIndex === i" class="mt-2 ps-3">
-          <small class="text-muted">Top Vehicles</small>
-          <div *ngIf="errorRowLoading[item.name]" class="text-center my-2">
-            <div class="spinner-border text-primary spinner-border-sm" role="status">
-              <span class="visually-hidden">Loading...</span>
+    <div class="sidebar-list">
+      <h5 class="mt-4">Top 5 Summary</h5>
+      <ul class="list-group shadow-sm">
+        <li class="list-group-item bg-dark text-light border-secondary"
+            *ngFor="let item of top10ErrorData.slice(0, 5); let i = index"
+            (click)="toggleError(i)"
+            style="cursor: pointer;">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>{{ item.name }}</div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-primary rounded-pill me-2">{{ item.value }}</span>
+              <span class="chevron-icon" [class.rotate]="expandedErrorIndex === i">⌄</span>
             </div>
           </div>
-          <ul class="list-unstyled ms-2"
-              *ngIf="!errorRowLoading[item.name] && (errorToEquipMap[item.name]?.length || 0) > 0; else noVehicles">
-            <li *ngFor="let sub of errorToEquipMap[item.name]">
-              ▸ {{ sub.name }} <span class="badge bg-secondary">{{ sub.value }}</span>
-            </li>
-          </ul>
-          <ng-template #noVehicles>
-            <p class="text-muted small ms-2">No matching data found.</p>
-          </ng-template>
-        </div>
-      </li>
-    </ul>
+          <div *ngIf="expandedErrorIndex === i" class="mt-2 ps-3">
+            <small class="text-muted">Top Vehicles</small>
+            <div *ngIf="errorRowLoading[item.name]" class="text-center my-2">
+              <div class="spinner-border text-primary spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <ul class="list-unstyled ms-2"
+                *ngIf="!errorRowLoading[item.name] && (errorToEquipMap[item.name]?.length || 0) > 0; else noVehicles">
+              <li *ngFor="let sub of errorToEquipMap[item.name]">
+                ▸ {{ sub.name }} <span class="badge bg-secondary">{{ sub.value }}</span>
+              </li>
+            </ul>
+            <ng-template #noVehicles>
+              <p class="text-muted small ms-2">No matching data found.</p>
+            </ng-template>
+          </div>
+        </li>
+      </ul>
+    </div>
   </div>
-</div>
 
 
 <!-- Section: Top Equipment with Scrollable Chart -->
-<div class="flex-row-scroll">
+<div class="flex-row-scroll" *ngIf="!isLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Top Equipment by Error Count</h3>
     <div class="scroll-container" style="overflow-x: auto; overflow-y: hidden; max-width: 100%; height: 560px; padding-bottom: 4rem;">
@@ -72,7 +92,10 @@
         [xAxisLabel]="'Equipment ID'"
         [yAxisLabel]="'Error Count'"
         [legend]="false"
-        [yAxisTickFormatting]="yAxisTickFormatting">
+        [yAxisTickFormatting]="yAxisTickFormatting"
+        [showDataLabel]="true"
+        [trimXAxisTicks]="false"
+        class="white-labels">
       </ngx-charts-bar-vertical>
     </div>
   </div>
@@ -117,7 +140,7 @@
 
 
 <!-- Section: Monthly Error Trend -->
-<div class="flex-row-scroll">
+<div class="flex-row-scroll" *ngIf="!isLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Error Trend by Month</h3>
     <div class="scroll-container">
@@ -173,7 +196,7 @@
 
 
  <!-- Section: Multi-line Error Trends -->
-<div class="flex-row-scroll">
+<div class="flex-row-scroll" *ngIf="!isLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Error Trends by Error Type</h3>
     <div class="scroll-container">
@@ -183,11 +206,11 @@
         [results]="errorTrendMultiLineData"
         [xAxis]="true"
         [yAxis]="true"
-        [xAxisLabel]="'Month'"
-        [yAxisLabel]="'Occurrences'"
         [legend]="true"
-        [autoScale]="true"
-        [xAxisTickFormatting]="formatXAxisTick">
+        [showGridLines]="true"
+        [roundDomains]="true"
+        [xAxisLabel]="'Month'"
+        [yAxisLabel]="'Error Count'">
       </ngx-charts-line-chart>
     </div>
   </div>
@@ -219,13 +242,13 @@
 
 
     <!-- Search Bar -->
-    <div class="input-group mb-4 justify-content-center">
+    <div class="input-group mb-4 justify-content-center" *ngIf="!isLoading">
       <input type="text" class="form-control w-100 shadow-sm bg-dark text-light border-secondary" placeholder="Search by Equip ID" (input)="onSearch($event)" />
     </div>
   
 
 <!-- Tool Cards (Scrollable Grid) -->
-<div class="tool-list-scrollable">
+<div class="tool-list-scrollable" *ngIf="!isLoading">
   <div class="tool-card" *ngFor="let tool of filteredTools">
     <div class="tool-header">
       <h5 class="tool-id">{{ tool.equip_id }}</h5>

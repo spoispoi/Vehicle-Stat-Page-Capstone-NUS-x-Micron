@@ -67,3 +67,14 @@ app-root {
 ::ng-deep ngx-charts-advanced-pie-chart .legend-label:hover {
  fill: #ffffff !important; /* Maintain text color on hover */
 }
+
+/* You can add global styles to this file, and also import other style files */
+
+/* Force ngx-charts data labels to be white */
+.ngx-charts .data-label, 
+.ngx-charts .bar-label {
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+  font-weight: bold !important;
+  font-size: 14px !important;
+}

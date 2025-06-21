@@ -11,13 +11,13 @@ import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { StatisticsService } from '../services/statistics.service';
 import {
-  CommonModule,
   isPlatformBrowser,
   ViewportScroller,
 } from '@angular/common';
 import { NgxChartsModule } from '@swimlane/ngx-charts';
 import { Color, ScaleType, LegendPosition } from '@swimlane/ngx-charts';
 import { curveMonotoneX } from 'd3-shape';
+import { DateFilterComponent, DateRange } from '../components/date-filter/date-filter.component';
 
 interface Entry {
   state_in_date: string;
@@ -33,6 +33,7 @@ interface ErrorNote {
 
 interface ErrorFrequency {
   name: string;
+  extra: { date: string };
   series: { name: string; value: number }[];
 }
 
@@ -41,7 +42,7 @@ interface ErrorFrequency {
   templateUrl: './equip-statistics.component.html',
   styleUrls: ['./equip-statistics.component.css'],
   standalone: true,
-  imports: [RouterOutlet, NgxChartsModule, CommonModule],
+  imports: [RouterOutlet, NgxChartsModule, DateFilterComponent],
 })
 export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   equipId: string = '';
@@ -63,6 +64,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   errorByEquipData: { name: string; series: { name: string; value: number }[] }[] = [];
   pmEntries: Entry[] = [];
   pmCount: number = 0;
+
+  // Date filter properties
+  startDate: string = '';
+  endDate: string = '';
+  isLoading: boolean = false;
 
   @ViewChild('entriesSection') entriesSection!: ElementRef;
 
@@ -95,99 +101,135 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
-    const equipIdParam = this.route.snapshot.paramMap.get('equip_id');
-    if (equipIdParam) {
-      this.equipId = equipIdParam;
-      this.fetchStatistics(this.equipId);
-      this.fetchEquipEntries(this.equipId);
-      this.fetchStatisticsGraph(this.equipId);
+    this.route.params.subscribe((params) => {
+      // The route is configured as 'statistics/:equip_id'
+      this.equipId = params['equip_id'];
+      console.log('Route params:', params);
+      console.log('Equipment ID:', this.equipId);
+      
+      if (this.equipId) {
+        this.loadStatistics();
+      } else {
+        console.error('No equipment ID found in route parameters');
+      }
+    });
+  }
+
+  ngAfterViewInit(): void {
+    if (this.isBrowser) {
+      this.viewportScroller.scrollToPosition([0, 0]);
     }
   }
 
- ngAfterViewInit(): void {
-  if (this.isBrowser) {
-    setTimeout(() => {
-      requestAnimationFrame(() => {
-        const body = document.body;
-
-        console.log('[Scroll Fix] body.scrollTop before:', body.scrollTop);
-        body.scrollTo({ top: 0, behavior: 'smooth' });
-
-        setTimeout(() => {
-          console.log('[Scroll Fix] body.scrollTop after:', body.scrollTop);
-        }, 500);
-      });
-    }, 100); // small delay to wait for charts/data load
-  }
-}
-
-  fetchStatistics(equipId: string): void {
-    this.statisticsService.getStatistics(equipId).subscribe(
-      (data) => {
+  loadStatistics(): void {
+    this.isLoading = true;
+    console.log('Loading statistics for equipment:', this.equipId);
+    
+    this.statisticsService.getStatistics(this.equipId, this.startDate, this.endDate).subscribe({
+      next: (data) => {
+        console.log('Statistics data received:', data);
         this.statistics = data;
-        this.populateStatistics();
+        this.transformData(data);
+        this.loadToolEntries();
+        this.isLoading = false;
       },
-      (error) => {
-        console.error('Error fetching statistics:', error);
+      error: (error) => {
+        console.error('Error loading statistics:', error);
+        // Set default values when there's an error
+        this.statistics = {
+          most_common_event_code: 'N/A',
+          most_common_error_name: 'N/A',
+          latest_error_date: 'N/A',
+          error_frequency: [],
+          error_notes: {}
+        };
+        this.transformData(this.statistics);
+        this.loadToolEntries();
+        this.isLoading = false;
       }
+    });
+  }
+
+  loadToolEntries(): void {
+    // Load actual tool entries for the equipment
+    let url = `http://127.0.0.1:8000/api/tools/?equip_id=${this.equipId}`;
+    const params: string[] = [];
+    
+    if (this.startDate) {
+      params.push(`start_date=${this.startDate}`);
+    }
+    if (this.endDate) {
+      params.push(`end_date=${this.endDate}`);
+    }
+    
+    if (params.length > 0) {
+      url += '&' + params.join('&');
+    }
+    
+    console.log('Loading tool entries from URL:', url);
+    
+    this.http.get<any[]>(url).subscribe({
+      next: (tools) => {
+        console.log('Tool entries received:', tools);
+        this.processToolEntries(tools);
+      },
+      error: (error) => {
+        console.error('Error loading tool entries:', error);
+        this.processToolEntries([]);
+      }
+    });
+  }
+
+  processToolEntries(tools: any[]): void {
+    // Convert tools to entries format
+    const allEntries: Entry[] = tools.map(tool => ({
+      state_in_date: tool.state_in_date,
+      event_code: tool.event_code,
+      error_name: tool.error_name,
+      error_description: tool.error_description
+    }));
+
+    // Separate error entries from PM entries
+    this.entries = allEntries.filter((e) => e.error_name !== 'Unknown');
+    this.filteredEntries = this.sortEntries(this.entries);
+    
+    // Set PM entries (entries with 'Unknown' error name)
+    this.pmEntries = this.sortEntries(allEntries.filter((e) => e.error_name === 'Unknown'));
+    this.pmCount = this.pmEntries.length;
+
+    console.log('Processed entries:', {
+      totalEntries: allEntries.length,
+      errorEntries: this.entries.length,
+      pmEntries: this.pmEntries.length,
+      filteredEntries: this.filteredEntries.length
+    });
+  }
+
+  // populateStatistics method removed - data is now displayed directly in template
+
+  onDateRangeChange(dateRange: DateRange): void {
+    this.startDate = dateRange.startDate;
+    this.endDate = dateRange.endDate;
+    this.loadStatistics();
+  }
+
+  onFilterCleared(): void {
+    this.startDate = '';
+    this.endDate = '';
+    this.loadStatistics();
+  }
+
+  // setDateRange method removed - functionality now in date filter component
+
+  sortEntries(entries: Entry[]): Entry[] {
+    return [...entries].sort(
+      (a, b) => new Date(b.state_in_date).getTime() - new Date(a.state_in_date).getTime()
     );
   }
 
-  populateStatistics(): void {
-    if (this.isBrowser) {
-      document.getElementById('most-common-event-code')!.textContent =
-        this.statistics.most_common_event_code;
-      document.getElementById('most-common-error-name')!.textContent =
-        this.statistics.most_common_error_name;
-      document.getElementById('latest-error-date')!.textContent =
-        this.statistics.latest_error_date;
-    }
-  }
-
-  fetchEquipEntries(equipId: string): void {
-    this.http
-      .get<Entry[]>(`/api/tools/?equip_id=${equipId}`)
-      .subscribe((data) => {
-        this.pmEntries = data.filter((e) => e.error_name === 'Unknown');
-        this.pmCount = this.pmEntries.length;
-        this.entries = data.filter((e) => e.error_name !== 'Unknown');
-
-        this.filteredEntries = [...this.entries].sort(
-          (a, b) =>
-            new Date(b.state_in_date).getTime() -
-            new Date(a.state_in_date).getTime()
-        );
-
-        this.renderEquipEntries();
-        this.prepareErrorByEquipData();
-      });
-  }
-
   renderEquipEntries(): void {
-    if (this.isBrowser) {
-      const container = document.getElementById('equip-entries-container');
-      if (container) {
-        container.innerHTML = '';
-        this.filteredEntries.sort(
-          (a, b) =>
-            new Date(b.state_in_date).getTime() -
-            new Date(a.state_in_date).getTime()
-        );
-
-        this.filteredEntries.forEach((entry) => {
-          const div = document.createElement('div');
-          div.classList.add('equip-entry');
-          div.innerHTML = `
-            <strong>State In Date:</strong> ${this.formatDate(entry.state_in_date)} <br>
-            <strong>Event Code:</strong> ${entry.event_code} <br>
-            <strong>Error Name:</strong> ${entry.error_name} <br>
-            <strong>Error Description:</strong> ${entry.error_description} <br>
-            <hr>
-          `;
-          container.appendChild(div);
-        });
-      }
-    }
+    // This method is no longer needed as we're using processToolEntries
+    // Keeping it for backward compatibility but it's not used
   }
 
   prepareErrorByEquipData(): void {
@@ -216,7 +258,19 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
 
   transformData(data: any) {
-    if (!data.error_frequency || data.error_frequency.length === 0) return;
+    console.log('Transforming data:', data);
+    
+    // Initialize default values
+    this.errorFrequencyData = [];
+    this.lineChartData = [];
+    this.errorNotesData = [];
+    this.heatmapData = [];
+
+    // Check if we have error frequency data
+    if (!data.error_frequency || data.error_frequency.length === 0) {
+      console.log('No error frequency data found');
+      return;
+    }
 
     const allDates = data.error_frequency.map((item: any) => new Date(item.date));
     const minYear = Math.min(...allDates.map((d: Date) => d.getFullYear()));
@@ -277,17 +331,26 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       },
     ];
 
-    this.errorNotesData = Object.keys(data.error_notes || {})
-      .filter((key) => key !== 'Unknown')
-      .map((key) => ({
-        name: key,
-        value: data.error_notes[key].length,
-      }));
+    // Handle error notes data
+    if (data.error_notes) {
+      this.errorNotesData = Object.keys(data.error_notes)
+        .filter((key) => key !== 'Unknown')
+        .map((key) => ({
+          name: key,
+          value: data.error_notes[key].length,
+        }));
+    }
 
     this.heatmapData = Object.entries(dailyTotals).map(([date, count]) => ({
       date,
       count,
     }));
+
+    console.log('Transformed data:', {
+      errorFrequencyData: this.errorFrequencyData,
+      lineChartData: this.lineChartData,
+      errorNotesData: this.errorNotesData
+    });
   }
 
   getMonthYearLabel(month: number, year: number): string {
@@ -296,43 +359,53 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
 
   formatDate(dateString: string | null): string {
-    if (dateString) {
+    if (!dateString) return 'N/A';
+    
+    try {
       const date = new Date(dateString);
-      return date.toLocaleString();
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      // Format as YYYY-MM-DD HH:MM:SS
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    } catch (error) {
+      console.error('Error formatting date:', dateString, error);
+      return 'N/A';
     }
-    return '';
   }
 
   onErrorSelect(event: any) {
     this.selectedErrorName = event.name;
-    this.filteredEntries = this.entries.filter(
-      (entry) => entry.error_name === event.name
+    this.filteredEntries = this.sortEntries(
+      this.entries.filter((entry) => entry.error_name === event.name)
     );
-    this.renderEquipEntries();
-
-    if (this.entriesSection?.nativeElement) {
-      this.entriesSection.nativeElement.scrollIntoView({ behavior: 'smooth' });
-    }
+    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
   }
 
   clearErrorFilter(): void {
     this.selectedErrorName = null;
-    this.filteredEntries = [...this.entries];
-    this.renderEquipEntries();
-
-    this.viewportScroller.scrollToPosition([0, 0]);
+    this.filteredEntries = this.sortEntries(this.entries);
   }
 
   onMonthSelect(event: any): void {
     const [month, year] = event.series?.split(' ') ?? [];
     const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
 
-    this.filteredEntries = this.entries.filter((entry) => {
-      const date = new Date(entry.state_in_date);
-      return (
-        date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
-      );
-    });
+    this.filteredEntries = this.sortEntries(
+      this.entries.filter((entry) => {
+        const date = new Date(entry.state_in_date);
+        return (
+          date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
+        );
+      })
+    );
 
     this.selectedErrorName = `${month} ${year}`;
     this.renderEquipEntries();
@@ -344,12 +417,14 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     const [month, year] = event.name?.split(' ') ?? [];
     const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
 
-    this.filteredEntries = this.entries.filter((entry) => {
-      const date = new Date(entry.state_in_date);
-      return (
-        date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
-      );
-    });
+    this.filteredEntries = this.sortEntries(
+      this.entries.filter((entry) => {
+        const date = new Date(entry.state_in_date);
+        return (
+          date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
+        );
+      })
+    );
 
     this.selectedErrorName = `${month} ${year}`;
     this.renderEquipEntries();

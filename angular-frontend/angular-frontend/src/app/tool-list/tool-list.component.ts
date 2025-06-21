@@ -5,6 +5,7 @@ import { CommonModule, DOCUMENT } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
 import { Color, NgxChartsModule, ScaleType } from '@swimlane/ngx-charts';
 import { trigger, state, style, animate, transition } from '@angular/animations';
+import { DateFilterComponent, DateRange } from '../components/date-filter/date-filter.component';
 
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
@@ -12,7 +13,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 @Component({
   selector: 'app-tool-list',
   standalone: true,
-  imports: [RouterOutlet, NgxChartsModule, CommonModule],
+  imports: [RouterOutlet, NgxChartsModule, CommonModule, DateFilterComponent],
   templateUrl: './tool-list.component.html',
   styleUrls: ['./tool-list.component.css'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -39,6 +40,11 @@ export class ToolListComponent implements OnInit {
   searchErrorTerm: string = '';
   filteredErrorTypes: string[] = [];
 
+  // Date filter properties
+  startDate: string = '';
+  endDate: string = '';
+  earliestDate: string = '';
+  isLoading: boolean = false;
 
   errorToEquipMap: { [key: string]: { name: string; value: number }[] } = {};
   equipToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
@@ -102,74 +108,102 @@ export class ToolListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.toolService.getTools().subscribe((tools) => {
-      this.toolsRaw = tools;
+    this.loadTools();
+  }
 
-      const groupedTools = this.groupToolsByEquipId(tools);
-      this.tools = groupedTools;
-      this.filteredTools = [...this.tools];
-      this.sortByEquipId();
-     // this.renderToolList();
-
-      const errorCounts = this.calculateErrorCounts(tools);
-      this.top10ErrorData = this.formatTop10ChartData(errorCounts);
-
-      this.colorSchemeTopCount.domain = this.top10ErrorData.map((item, index) => 
-      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
-    );
-
-
-      this.top10ErrorData.slice(0, 5).forEach(error => {
-        this.errorRowLoading[error.name] = true;
-        setTimeout(() => {
-          this.errorToEquipMap[error.name] = this.getEquipmentsForError(error.name);
-          this.errorRowLoading[error.name] = false;
-        }, 300);
-      });
-
-      this.errorTrendData = this.calculateMonthlyErrorTrend(tools);
-
-      //this.errorTrendData.sort((a, b) => b.value - a.value);
-      this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5);
-
-
-      const equipIdErrorCounts = this.calculateEquipIdErrorCounts(tools);
-      this.equipIdErrorData = this.formatEquipIdChartData(equipIdErrorCounts);
-
-      
-      // Limit to top 20 equipments
-      this.top20Equipments = this.equipIdErrorData.slice(0, 50);
-
-      this.colorSchemeEquipTopCount.domain = this.top20Equipments.map((item, index) => 
-      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
-    );
-
-
-
-      this.equipIdErrorData.slice(0, 5).forEach(equip => {
-        this.equipRowLoading[equip.name] = true;
-        setTimeout(() => {
-          this.equipToErrorMap[equip.name] = this.getErrorsForEquip(equip.name);
-          this.equipRowLoading[equip.name] = false;
-        }, 300);
-      });
-
-      this.errorTrendData.forEach(month => {
-        this.monthRowLoading[month.name] = true;
-        console.log(`Loading data for month: ${month.name}`); // Debugging statement
-        setTimeout(() => {
-          this.monthToErrorMap[month.name] = this.getTopErrorsForMonth(month.name);
-          console.log(`Data for month ${month.name}:`, this.monthToErrorMap[month.name]); // Debugging statement
-          this.monthRowLoading[month.name] = false;
-        }, 300);
-      });
-      
-
-      this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))];
-      this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
-      this.filteredErrorTypes = [...this.allErrorTypes]; // Initialize filteredErrorTypes
-      this.generateMultiLineChart();
+  loadTools(): void {
+    this.isLoading = true;
+    this.toolService.getTools(this.startDate, this.endDate).subscribe({
+      next: (tools) => {
+        this.toolsRaw = tools;
+        this.processToolsData(tools);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading tools:', error);
+        this.isLoading = false;
+      }
     });
+  }
+
+  onDateRangeChange(dateRange: DateRange): void {
+    this.startDate = dateRange.startDate;
+    this.endDate = dateRange.endDate;
+    this.loadTools();
+  }
+
+  onFilterCleared(): void {
+    this.startDate = '';
+    this.endDate = '';
+    this.loadTools();
+  }
+
+  private processToolsData(tools: any[]): void {
+    // Calculate earliest date from tools data
+    if (tools.length > 0) {
+      const dates = tools.map(t => new Date(t.state_in_date)).filter(d => !isNaN(d.getTime()));
+      if (dates.length > 0) {
+        const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
+        this.earliestDate = earliest.toISOString().split('T')[0];
+      }
+    }
+
+    const groupedTools = this.groupToolsByEquipId(tools);
+    this.tools = groupedTools;
+    this.filteredTools = [...this.tools];
+    this.sortByEquipId();
+
+    const errorCounts = this.calculateErrorCounts(tools);
+    this.top10ErrorData = this.formatTop10ChartData(errorCounts);
+
+    this.colorSchemeTopCount.domain = this.top10ErrorData.map((item, index) => 
+      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
+    );
+
+    this.top10ErrorData.slice(0, 5).forEach(error => {
+      this.errorRowLoading[error.name] = true;
+      setTimeout(() => {
+        this.errorToEquipMap[error.name] = this.getEquipmentsForError(error.name);
+        this.errorRowLoading[error.name] = false;
+      }, 300);
+    });
+
+    this.errorTrendData = this.calculateMonthlyErrorTrend(tools);
+
+    this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5);
+
+    const equipIdErrorCounts = this.calculateEquipIdErrorCounts(tools);
+    this.equipIdErrorData = this.formatEquipIdChartData(equipIdErrorCounts);
+
+    // Limit to top 20 equipments
+    this.top20Equipments = this.equipIdErrorData.slice(0, 50);
+
+    this.colorSchemeEquipTopCount.domain = this.top20Equipments.map((item, index) => 
+      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
+    );
+
+    this.equipIdErrorData.slice(0, 5).forEach(equip => {
+      this.equipRowLoading[equip.name] = true;
+      setTimeout(() => {
+        this.equipToErrorMap[equip.name] = this.getErrorsForEquip(equip.name);
+        this.equipRowLoading[equip.name] = false;
+      }, 300);
+    });
+
+    this.errorTrendData.forEach(month => {
+      this.monthRowLoading[month.name] = true;
+      console.log(`Loading data for month: ${month.name}`); // Debugging statement
+      setTimeout(() => {
+        this.monthToErrorMap[month.name] = this.getTopErrorsForMonth(month.name);
+        console.log(`Data for month ${month.name}:`, this.monthToErrorMap[month.name]); // Debugging statement
+        this.monthRowLoading[month.name] = false;
+      }, 300);
+    });
+
+    this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))];
+    this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
+    this.filteredErrorTypes = [...this.allErrorTypes]; // Initialize filteredErrorTypes
+    this.generateMultiLineChart();
   }
 
   toggleDarkMode(): void {
