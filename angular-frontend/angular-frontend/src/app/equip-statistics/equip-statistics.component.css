@@ -237,3 +237,18 @@ ngx-charts-advanced-pie-chart text:hover {
   transform: scale(1.1); /* Just scale, no translate */
 }
 
+/* Factory Floor Grid Background */
+.factory-floor {
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-attachment: fixed;
+}
+
+/* Make the area chart fill transparent to mimic a line chart */
+::ng-deep .ngx-charts-area-chart .area {
+  opacity: 0.1 !important; /* Use a very low opacity to hint at the area */
+}
+

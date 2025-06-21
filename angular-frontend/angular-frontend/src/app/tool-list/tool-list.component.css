@@ -53,7 +53,7 @@ html, body, app-root, :host {
 }
 
 .dark-mode {
-  background-color: #0d1117;
+  /* background-color: #0d1117; */ /* Removed to allow factory floor to be visible */
   color: #c9d1d9;
 }
 
@@ -247,6 +247,31 @@ g.axis line,
   fill: #c9d1d9 !important;
   font-size: 14px !important;
   font-weight: 500;
+}
+
+/* Factory Floor Grid Background */
+.factory-floor {
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-attachment: fixed;
+}
+
+.transport-unit {
+  position: fixed; /* Position relative to the viewport */
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  background-color: #ff6347; /* Bright color for visibility */
+  border: 2px solid #fff;
+  border-radius: 4px;
+  transition: transform 0.5s linear; /* Smooth linear movement */
+  will-change: transform;
+  z-index: 9999; /* Ensure it's on top of all other content */
+  pointer-events: none; /* Prevent it from intercepting mouse events */
 }
 
 ::ng-deep g.axis path,

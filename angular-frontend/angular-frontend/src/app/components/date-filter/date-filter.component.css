@@ -10,7 +10,7 @@
   max-width: 520px;
   width: 100%;
   border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   margin-left: 0;
 }
 
@@ -19,15 +19,15 @@
 }
 
 .filter-title {
-  margin-bottom: 1rem;
-  font-weight: 500;
-  font-size: 1rem;
-  text-align: left;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #fff !important; /* Ensure the text is white */
 }
 
 /* Alert styling */
 .alert {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   font-size: 0.8rem;
