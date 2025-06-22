@@ -56,10 +56,22 @@ h4,
 
 .page-title {
   font-family: 'Roboto', sans-serif;
-  font-weight: 700;
-  color: #e0e0e0;
+  font-weight: 300;
+  font-size: 1.75rem;
+  color: #bdc3c7;
+  text-align: left;
+  margin: 0;
   letter-spacing: 0.5px;
-  margin-top: 50px;
+}
+
+.page-title span {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1.8rem;
+  color: #ffffff;
+  letter-spacing: 2px;
+  margin-left: 0.75rem;
+  text-shadow: none;
 }
 
 ngx-charts-bar-vertical-stacked,
@@ -97,27 +109,52 @@ ngx-charts-advanced-pie-chart {
 }
 
 .chart-card,
-.stat-card,
-.entries-card {
-  background: #161b22;
-  color: #eaeaea;
+.entries-card,
+.alert-filter {
+  background: rgba(40, 44, 52, 0.3); /* Semi-transparent dark blue */
+  border: 1px solid rgba(62, 68, 76, 0.4);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .chart-title {
   font-weight: 600;
   font-size: 1.1rem;
   margin-bottom: 1rem;
-}
-
-.stat-label {
-  font-size: 0.85rem;
   color: #ccc;
 }
 
+.stat-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #bdc3c7;
+}
+
 .stat-value {
-  font-size: 1.25rem;
+  font-size: 2.5rem;
   font-weight: 600;
-  color: #4dabf7;
+  margin-bottom: 0.25rem;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.stat-value-longtext {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  text-align: center; /* Ensure wrapped text stays centered */
+}
+
+.stat-unit,
+.stat-count {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  color: #95a5a6;
+}
+
+.stat-sub-info {
+  font-size: 0.75rem;
+  color: #95a5a6;
+  margin-top: 0.5rem;
 }
 
 .text-highlight {
@@ -129,9 +166,8 @@ ngx-charts-advanced-pie-chart {
 }
 
 .alert-filter {
-  background-color: #161b22;
   color: #f8f9fa;
-  border-left: 4px solid #0dcaf0;
+  border-left: none; /* Remove the specific left border */
 }
 
 .table-header th {
@@ -250,5 +286,187 @@ ngx-charts-advanced-pie-chart text:hover {
 /* Make the area chart fill transparent to mimic a line chart */
 ::ng-deep .ngx-charts-area-chart .area {
   opacity: 0.1 !important; /* Use a very low opacity to hint at the area */
+}
+
+/* 
+  Consistent Card Styles for Dashboard
+  - Applies to Overview Stat Cards and Recent Activity
+*/
+
+.stat-card,
+.recent-activity-notice {
+  background: rgba(40, 44, 52, 0.3); /* Semi-transparent dark blue */
+  border: 1px solid rgba(62, 68, 76, 0.4);
+  border-radius: 8px;
+  height: 100%;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  color: #cfd8dc;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Stat Card Specifics */
+.stat-card .card-body {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #bdc3c7;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.stat-value-longtext {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  text-align: center; /* Ensure wrapped text stays centered */
+}
+
+.stat-unit,
+.stat-count {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  color: #95a5a6;
+}
+
+.stat-sub-info {
+  font-size: 0.75rem;
+  color: #95a5a6;
+  margin-top: 0.5rem;
+}
+
+.days-value {
+  color: #ffffff !important; /* White for consistency */
+}
+
+/* Recent Activity Card Specifics */
+.recent-activity-notice .card-body {
+  padding: 1rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-activity-notice .activity-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.recent-activity-notice .activity-icon-large {
+  font-size: 1.5rem;
+  color: #58a6ff;
+}
+
+.recent-activity-notice .activity-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0;
+  color: #f5f5f5;
+}
+
+.recent-activity-notice .activity-timestamp {
+  font-size: 0.8rem;
+  color: #95a5a6;
+  margin-top: 2px;
+}
+
+.recent-activity-notice .activity-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recent-activity-notice .activity-main-info {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.recent-activity-notice .error-name-badge,
+.recent-activity-notice .event-code-badge {
+  background: rgba(73, 80, 87, 0.6);
+  color: #f8f9fa;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.recent-activity-notice .activity-description {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #bdc3c7;
+  overflow-y: auto; /* Allow scrolling for long descriptions */
+  max-height: 80px; /* Example max-height */
+}
+
+/* Custom Scrollbar for Recent Activity Description */
+.recent-activity-notice .activity-description::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recent-activity-notice .activity-description::-webkit-scrollbar-track {
+  background: transparent; /* Make the track invisible */
+}
+
+.recent-activity-notice .activity-description::-webkit-scrollbar-thumb {
+  background-color: #21262d; /* Dark, subtle scrollbar color */
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.recent-activity-notice .activity-description::-webkit-scrollbar-thumb:hover {
+  background-color: #30363d; /* Slightly lighter on hover */
+}
+
+.recent-activity-notice .no-activity {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recent-activity-notice .no-activity p {
+  color: rgba(207, 216, 220, 0.5);
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+  .recent-activity-notice {
+    margin-top: 1rem;
+  }
+  
+  .activity-header {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+  }
+  
+  .activity-icon-large {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+  
+  .activity-main-info {
+    justify-content: flex-start;
+  }
 }
 
