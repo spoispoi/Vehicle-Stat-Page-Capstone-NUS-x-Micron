@@ -121,6 +121,7 @@ export class ToolListComponent implements OnInit {
 
   loadTools(): void {
     this.isLoading = true;
+    
     this.toolService.getTools(this.startDate, this.endDate).subscribe({
       next: (tools) => {
         this.toolsRaw = tools;
@@ -350,25 +351,44 @@ export class ToolListComponent implements OnInit {
       const toolGroup = grouped[equipId];
       const validErrors = toolGroup.filter(t => t.error_name !== 'Unknown');
       if (validErrors.length === 0) return null;
+      
       const mostRecent = validErrors.reduce((a, b) => new Date(a.state_in_date) > new Date(b.state_in_date) ? a : b);
+      
+      // Count unique state_in_date + error_name combinations
+      const uniqueCombinations = new Set<string>();
       const countMap: { [key: string]: number } = {};
-      validErrors.forEach(t => countMap[t.error_name] = (countMap[t.error_name] || 0) + 1);
+      
+      validErrors.forEach(t => {
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          countMap[t.error_name] = (countMap[t.error_name] || 0) + 1;
+        }
+      });
+      
       const topError = Object.entries(countMap).sort((a, b) => b[1] - a[1])[0][0];
       return {
         equip_id: equipId,
         most_recent_error: mostRecent.error_name,
         most_recent_date: this.formatDate(mostRecent.state_in_date),
         top_error: topError,
-        error_count: validErrors.length
+        error_count: uniqueCombinations.size
       };
     }).filter(x => x !== null);
   }
 
   calculateErrorCounts(tools: any[]): { [key: string]: number } {
     const counts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
     tools.forEach(t => {
       if (t.error_name && t.error_name !== 'Unknown') {
-        counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        // Create unique key for state_in_date + error_name combination
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        }
       }
     });
     return counts;
@@ -376,12 +396,21 @@ export class ToolListComponent implements OnInit {
 
   calculateMonthlyErrorTrend(tools: any[]): any[] {
     const map: { [month: string]: number } = {};
+    const uniqueCombinations: { [month: string]: Set<string> } = {};
+    
     tools.forEach(t => {
       if (t.error_name !== 'Unknown') {
-        const date = new Date(t.state_in_date);
         const month = this.getLocalMonthKey(t.state_in_date);
-
-        map[month] = (map[month] || 0) + 1;
+        
+        if (!uniqueCombinations[month]) {
+          uniqueCombinations[month] = new Set<string>();
+        }
+        
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations[month].has(uniqueKey)) {
+          uniqueCombinations[month].add(uniqueKey);
+          map[month] = (map[month] || 0) + 1;
+        }
       }
     });
     return Object.entries(map).map(([name, value]) => ({ name, value }))
@@ -395,7 +424,22 @@ export class ToolListComponent implements OnInit {
 
   calculateEquipIdErrorCounts(tools: any[]): { [key: string]: number } {
     const counts: { [key: string]: number } = {};
-    tools.forEach(t => counts[t.equip_id] = (counts[t.equip_id] || 0) + 1);
+    const uniqueCombinations: { [key: string]: Set<string> } = {};
+    
+    tools.forEach(t => {
+      if (t.error_name && t.error_name !== 'Unknown') {
+        if (!uniqueCombinations[t.equip_id]) {
+          uniqueCombinations[t.equip_id] = new Set<string>();
+        }
+        
+        // Create unique key for state_in_date + error_name combination
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations[t.equip_id].has(uniqueKey)) {
+          uniqueCombinations[t.equip_id].add(uniqueKey);
+          counts[t.equip_id] = (counts[t.equip_id] || 0) + 1;
+        }
+      }
+    });
     return counts;
   }
 
@@ -405,9 +449,19 @@ export class ToolListComponent implements OnInit {
 
   getEquipmentsForError(errorName: string): any[] {
     const counts: { [key: string]: number } = {};
+    const uniqueCombinations: { [key: string]: Set<string> } = {};
+    
     this.toolsRaw.forEach(t => {
       if (t.error_name === errorName) {
-        counts[t.equip_id] = (counts[t.equip_id] || 0) + 1;
+        if (!uniqueCombinations[t.equip_id]) {
+          uniqueCombinations[t.equip_id] = new Set<string>();
+        }
+        
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations[t.equip_id].has(uniqueKey)) {
+          uniqueCombinations[t.equip_id].add(uniqueKey);
+          counts[t.equip_id] = (counts[t.equip_id] || 0) + 1;
+        }
       }
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
@@ -415,9 +469,15 @@ export class ToolListComponent implements OnInit {
 
   getErrorsForEquip(equipId: string): any[] {
     const counts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
     this.toolsRaw.forEach(t => {
       if (t.equip_id === equipId && t.error_name !== 'Unknown') {
-        counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        }
       }
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
@@ -425,11 +485,16 @@ export class ToolListComponent implements OnInit {
 
   getTopErrorsForMonth(month: string): any[] {
     const counts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
     this.toolsRaw.forEach(t => {
-      const date = new Date(t.state_in_date);
       const monthKey = this.getLocalMonthKey(t.state_in_date);
       if (monthKey === month && t.error_name !== 'Unknown') {
-        counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        }
       }
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);
@@ -449,13 +514,27 @@ export class ToolListComponent implements OnInit {
 
   generateMultiLineChart(): void {
     const map: { [error: string]: { [month: string]: number } } = {};
-    this.selectedErrorTypes.forEach(e => map[e] = {});
+    const uniqueCombinations: { [error: string]: { [month: string]: Set<string> } } = {};
+    this.selectedErrorTypes.forEach(e => {
+      map[e] = {};
+      uniqueCombinations[e] = {};
+    });
   
     this.toolsRaw.forEach(t => {
       const e = t.error_name;
       if (!this.selectedErrorTypes.includes(e)) return;
-      const monthKey = this.getLocalMonthKey(t.state_in_date); // 'YYYY-MM'
-      map[e][monthKey] = (map[e][monthKey] || 0) + 1;
+      
+      const monthKey = this.getLocalMonthKey(t.state_in_date);
+      
+      if (!uniqueCombinations[e][monthKey]) {
+        uniqueCombinations[e][monthKey] = new Set<string>();
+      }
+      
+      const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+      if (!uniqueCombinations[e][monthKey].has(uniqueKey)) {
+        uniqueCombinations[e][monthKey].add(uniqueKey);
+        map[e][monthKey] = (map[e][monthKey] || 0) + 1;
+      }
     });
   
     // Collect all unique months to ensure sorting order is consistent
@@ -485,9 +564,15 @@ export class ToolListComponent implements OnInit {
   
   selectTopErrors(): void {
     const errorCounts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
     this.toolsRaw.forEach(t => {
       if (t.error_name && t.error_name !== 'Unknown') {
-        errorCounts[t.error_name] = (errorCounts[t.error_name] || 0) + 1;
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          errorCounts[t.error_name] = (errorCounts[t.error_name] || 0) + 1;
+        }
       }
     });
   

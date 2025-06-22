@@ -181,13 +181,21 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
 
   processToolEntries(tools: any[]): void {
+    console.log('Raw tools data from backend:', tools);
+    
     // Convert tools to entries format
-    const allEntries: Entry[] = tools.map(tool => ({
-      state_in_date: tool.state_in_date,
-      event_code: tool.event_code,
-      error_name: tool.error_name,
-      error_description: tool.error_description
-    }));
+    const allEntries: Entry[] = tools.map(tool => {
+      console.log('Processing tool:', tool);
+      console.log('Raw state_in_date:', tool.state_in_date);
+      return {
+        state_in_date: tool.state_in_date,
+        event_code: tool.event_code,
+        error_name: tool.error_name,
+        error_description: tool.error_description
+      };
+    });
+
+    console.log('Processed entries:', allEntries);
 
     // Separate error entries from PM entries
     this.entries = allEntries.filter((e) => e.error_name !== 'Unknown');
@@ -197,11 +205,12 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     this.pmEntries = this.sortEntries(allEntries.filter((e) => e.error_name === 'Unknown'));
     this.pmCount = this.pmEntries.length;
 
-    console.log('Processed entries:', {
+    console.log('Final processed entries:', {
       totalEntries: allEntries.length,
       errorEntries: this.entries.length,
       pmEntries: this.pmEntries.length,
-      filteredEntries: this.filteredEntries.length
+      filteredEntries: this.filteredEntries.length,
+      sampleEntry: this.entries[0]
     });
   }
 
@@ -223,7 +232,13 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
 
   sortEntries(entries: Entry[]): Entry[] {
     return [...entries].sort(
-      (a, b) => new Date(b.state_in_date).getTime() - new Date(a.state_in_date).getTime()
+      (a, b) => {
+        // Compare date strings directly to avoid timezone conversion
+        if (a.state_in_date && b.state_in_date) {
+          return b.state_in_date.localeCompare(a.state_in_date);
+        }
+        return 0;
+      }
     );
   }
 
@@ -272,15 +287,21 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const allDates = data.error_frequency.map((item: any) => new Date(item.date));
-    const minYear = Math.min(...allDates.map((d: Date) => d.getFullYear()));
-    const maxYear = Math.max(...allDates.map((d: Date) => d.getFullYear()));
+    // Parse dates without timezone conversion
+    const allDates = data.error_frequency.map((item: any) => {
+      const dateStr = item.date.split('T')[0]; // Get YYYY-MM-DD part
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return { year, month: month - 1, day }; // month is 0-indexed in JS
+    });
+    
+    const minYear = Math.min(...allDates.map((d: any) => d.year));
+    const maxYear = Math.max(...allDates.map((d: any) => d.year));
 
     const dateRange: string[] = [];
     for (let year = minYear; year <= maxYear; year++) {
       for (let month = 0; month < 12; month++) {
-        const date = new Date(year, month, 1);
-        dateRange.push(date.toISOString().split('T')[0]);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        dateRange.push(dateStr);
       }
     }
 
@@ -294,12 +315,8 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       if (item.error_name === 'Unknown') continue;
 
       const fullDate = item.date.split('T')[0];
-      const date = new Date(item.date);
-      const monthStart = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        1
-      ).toISOString().split('T')[0];
+      const [year, month, day] = fullDate.split('-').map(Number);
+      const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
 
       if (!errorFrequencyDict[monthStart][item.error_name]) {
         errorFrequencyDict[monthStart][item.error_name] = 0;
@@ -311,7 +328,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     }
 
     this.errorFrequencyData = dateRange.map((dateKey, i) => ({
-      name: this.getMonthYearLabel(i, minYear),
+      name: this.getMonthYearLabel(i % 12, minYear + Math.floor(i / 12)),
       extra: { date: dateKey },
       series: Object.entries(errorFrequencyDict[dateKey]).map(
         ([error, count]) => ({
@@ -325,7 +342,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       {
         name: 'Total Errors',
         series: dateRange.map((dateKey, i) => ({
-          name: this.getMonthYearLabel(i, minYear),
+          name: this.getMonthYearLabel(i % 12, minYear + Math.floor(i / 12)),
           value: monthlyTotals[dateKey] || 0,
         })),
       },
@@ -337,7 +354,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
         .filter((key) => key !== 'Unknown')
         .map((key) => ({
           name: key,
-          value: data.error_notes[key].length,
+          value: data.error_notes[key].count,
         }));
     }
 
@@ -354,8 +371,9 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
 
   getMonthYearLabel(month: number, year: number): string {
-    const date = new Date(year, month, 1);
-    return date.toLocaleString('default', { month: 'short', year: 'numeric' });
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[month]} ${year}`;
   }
 
   formatDate(dateString: string | null): string {
@@ -365,7 +383,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'N/A';
       
-      // Format as YYYY-MM-DD HH:MM:SS
+      // Format as YYYY-MM-DD HH:MM:SS in Singapore timezone
       return date.toLocaleString('en-US', {
         year: 'numeric',
         month: '2-digit',
@@ -373,7 +391,8 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: false
+        hour12: false,
+        timeZone: 'Asia/Singapore'
       });
     } catch (error) {
       console.error('Error formatting date:', dateString, error);
@@ -409,15 +428,16 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       const [month, year] = event.series?.split(' ') ?? [];
       if (!month || !year) return; // Exit if parsing fails
 
-      const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIndex = monthNames.indexOf(month);
 
       this.filteredEntries = this.sortEntries(
         this.entries.filter((entry) => {
-          // Use UTC date parts to avoid timezone-related off-by-one errors
-          const date = new Date(entry.state_in_date);
-          return (
-            date.getUTCFullYear() === parseInt(year) && date.getUTCMonth() === monthIndex
-          );
+          // Parse date string directly to avoid timezone conversion
+          const dateStr = entry.state_in_date.split('T')[0];
+          const [entryYear, entryMonth] = dateStr.split('-').map(Number);
+          return entryYear === parseInt(year) && (entryMonth - 1) === monthIndex;
         })
       );
       // Set the filter description to the selected month
@@ -430,14 +450,16 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
 
   onTrendSelect(event: any): void {
     const [month, year] = event.name?.split(' ') ?? [];
-    const monthIndex = new Date(Date.parse(`${month} 1, 2000`)).getMonth();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthIndex = monthNames.indexOf(month);
 
     this.filteredEntries = this.sortEntries(
       this.entries.filter((entry) => {
-        const date = new Date(entry.state_in_date);
-        return (
-          date.getFullYear() === parseInt(year) && date.getMonth() === monthIndex
-        );
+        // Parse date string directly to avoid timezone conversion
+        const dateStr = entry.state_in_date.split('T')[0];
+        const [entryYear, entryMonth] = dateStr.split('-').map(Number);
+        return entryYear === parseInt(year) && (entryMonth - 1) === monthIndex;
       })
     );
 

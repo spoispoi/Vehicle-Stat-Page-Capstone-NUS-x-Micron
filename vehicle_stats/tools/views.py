@@ -147,134 +147,106 @@ def equipment_statistics(request, equip_id):
     end_date = request.GET.get('end_date')
     print(f"Date filters - start_date: {start_date}, end_date: {end_date}")
     
-    # Build base queryset
-    queryset = Tool.objects.filter(equip_id=equip_id)
-    print(f"Base queryset count: {queryset.count()}")
+    # Base queryset for unfiltered data (for trend charts)
+    base_queryset = Tool.objects.filter(equip_id=equip_id)
     
-    # Apply date filters if provided
+    # Filtered queryset for cards and distribution chart
+    filtered_queryset = base_queryset
     if start_date and start_date.strip():
         try:
             start_date_obj = parse_date(start_date)
             if start_date_obj:
-                queryset = queryset.filter(state_in_date__date__gte=start_date_obj)
-                print(f"Applied start date filter: {start_date_obj}")
+                filtered_queryset = filtered_queryset.filter(state_in_date__date__gte=start_date_obj)
         except ValueError:
-            print(f"Invalid start date format: {start_date}")
             pass
     
     if end_date and end_date.strip():
         try:
             end_date_obj = parse_date(end_date)
             if end_date_obj:
-                queryset = queryset.filter(state_in_date__date__lte=end_date_obj)
-                print(f"Applied end date filter: {end_date_obj}")
+                filtered_queryset = filtered_queryset.filter(state_in_date__date__lte=end_date_obj)
         except ValueError:
-            print(f"Invalid end date format: {end_date}")
             pass
 
-    print(f"Final queryset count: {queryset.count()}")
-
-    # To accurately count unique events, we define an event by a distinct combination
-    # of 'state_in_date' and 'event_code'.
-    
-    # Get a queryset of distinct events, keeping the fields needed for aggregation.
-    distinct_events_qs = queryset.values(
-        'state_in_date', 
-        'event_code',
-        'error_name'
+    # --- Calculations for FILTERED data (cards, pie chart) ---
+    distinct_events_filtered_qs = filtered_queryset.values(
+        'state_in_date', 'error_name'
     ).distinct()
     
-    # Since the Django ORM support for aggregations on distinct multi-column values is limited,
-    # we perform the counting for "most common" items in Python for accuracy.
-    # This is efficient enough for typical dashboard loads.
-    
-    # Find the most common error name from distinct events.
-    error_name_counts = Counter(
-        item['error_name'] 
-        for item in distinct_events_qs if item['error_name'] != 'Unknown'
+    error_name_counts_filtered = Counter(
+        item['error_name'] for item in distinct_events_filtered_qs if item['error_name'] != 'Unknown'
     )
-    most_common_error_name_tuple = error_name_counts.most_common(1)
+    most_common_error_name_tuple = error_name_counts_filtered.most_common(1)
     most_common_error_name = most_common_error_name_tuple[0][0] if most_common_error_name_tuple else None
 
-    # Find the most common event code from distinct events.
-    event_code_counts = Counter(
-        item['event_code'] 
-        for item in distinct_events_qs if item['event_code'] != 'Unknown'
-    )
-    most_common_event_code_tuple = event_code_counts.most_common(1)
+    event_code_counts_filtered = Counter()
+    for item in distinct_events_filtered_qs:
+        if item['error_name'] != 'Unknown':
+            matching_tool = filtered_queryset.filter(
+                state_in_date=item['state_in_date'], error_name=item['error_name']
+            ).first()
+            if matching_tool and matching_tool.event_code != 'Unknown':
+                event_code_counts_filtered[matching_tool.event_code] += 1
+    most_common_event_code_tuple = event_code_counts_filtered.most_common(1)
     most_common_event_code = most_common_event_code_tuple[0][0] if most_common_event_code_tuple else None
 
-    print(f"Most common event code (distinct): {most_common_event_code}")
-    print(f"Most common error name (distinct): {most_common_error_name}")
-
-    # Aggregate general statistics.
-    # Total errors are now the count of distinct events.
-    total_distinct_errors = distinct_events_qs.count()
+    total_distinct_errors_filtered = distinct_events_filtered_qs.count()
     
-    agg_data = queryset.aggregate(
+    agg_data_filtered = filtered_queryset.aggregate(
         earliest_error_date=Min('state_in_date'),
         latest_error_date=Max('state_in_date'),
     )
 
-    data = {
-        "total_errors": total_distinct_errors,
-        **agg_data
-    }
-
-    # Format the dates as strings
-    if data['earliest_error_date']:
-        data['earliest_error_date'] = data['earliest_error_date'].strftime('%Y-%m-%d %H:%M:%S')
-    if data['latest_error_date']:
-        data['latest_error_date'] = data['latest_error_date'].strftime('%Y-%m-%d %H:%M:%S')
-
-    print(f"Aggregated data: {data}")
-
-    # Collect error notes grouped by error name
-    error_notes = (
-        queryset
-        .values('error_name', 'error_description')
-        .annotate(note_count=Count('error_description'))
-    )
-
-    # Format the error notes to group by error name
+    error_notes_counts = {k: v for k, v in error_name_counts_filtered.items()}
     formatted_error_notes = {}
-    for item in error_notes:
-        error_name = item['error_name']
-        if error_name not in formatted_error_notes:
-            formatted_error_notes[error_name] = []
-        formatted_error_notes[error_name].append(item['error_description'])
+    for error_name, count in error_notes_counts.items():
+        sample_tool = filtered_queryset.filter(error_name=error_name).first()
+        if sample_tool:
+            formatted_error_notes[error_name] = {
+                'count': count,
+                'description': sample_tool.error_description
+            }
 
-    # Get error frequency data along with error names occurring on the same date
-    error_frequency = (
-        queryset
-        .values('state_in_date', 'error_name')
-        .annotate(count=Count('event_code', distinct=True))
-        .order_by('state_in_date')
-    )
+    # --- Calculations for UNFILTERED data (trend charts) ---
+    distinct_events_unfiltered_qs = base_queryset.values(
+        'state_in_date', 'error_name'
+    ).distinct()
 
-    # Format the error frequency to group by date
+    error_frequency_dict = {}
+    for item in distinct_events_unfiltered_qs:
+        if item['error_name'] != 'Unknown':
+            date_str = item['state_in_date'].strftime('%Y-%m-%d')
+            if date_str not in error_frequency_dict:
+                error_frequency_dict[date_str] = {'date': date_str, 'count': 0, 'errors': {}}
+            
+            error_name = item['error_name']
+            if error_name not in error_frequency_dict[date_str]['errors']:
+                error_frequency_dict[date_str]['errors'][error_name] = 0
+            error_frequency_dict[date_str]['errors'][error_name] += 1
+    
     formatted_error_frequency = []
-    for item in error_frequency:
-        date = item['state_in_date'].strftime('%Y-%m-%d')
-        formatted_error_frequency.append({
-            'date': date,
-            'error_name': item['error_name'],
-            'count': item['count']
-        })
+    for date_str, data in error_frequency_dict.items():
+        for error_name, count in data['errors'].items():
+            formatted_error_frequency.append({
+                'date': date_str,
+                'error_name': error_name,
+                'count': count
+            })
 
-    # Add detailed statistics to the response
-    data.update({
+    # --- Assemble the response ---
+    data_response = {
+        "total_errors": total_distinct_errors_filtered,
         "most_common_event_code": most_common_event_code,
         "most_common_error_name": most_common_error_name,
         "error_notes": formatted_error_notes,
         "error_frequency": formatted_error_frequency,
-    })
+        **agg_data_filtered
+    }
     
-    print(f"Error frequency count: {len(formatted_error_frequency)}")
-    print(f"Error notes count: {len(formatted_error_notes)}")
-    print(f"Final response - most_common_event_code: {data.get('most_common_event_code')}")
-    print(f"Final response - most_common_error_name: {data.get('most_common_error_name')}")
-    print(f"Final response - latest_error_date: {data.get('latest_error_date')}")
+    if data_response['earliest_error_date']:
+        data_response['earliest_error_date'] = data_response['earliest_error_date'].strftime('%Y-%m-%d %H:%M:%S')
+    if data_response['latest_error_date']:
+        data_response['latest_error_date'] = data_response['latest_error_date'].strftime('%Y-%m-%d %H:%M:%S')
 
-    return JsonResponse(data)
+    return JsonResponse(data_response)
 
