@@ -658,3 +658,14 @@ ngx-charts-advanced-pie-chart text:hover {
   justify-content: center;
 }
 
+.details-expand-transition {
+  transition: max-height 0.5s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.4s;
+  overflow: hidden;
+  max-height: 220px;
+  opacity: 1;
+}
+.details-expand-transition.expanded {
+  max-height: 1200px;
+  opacity: 1;
+}
+

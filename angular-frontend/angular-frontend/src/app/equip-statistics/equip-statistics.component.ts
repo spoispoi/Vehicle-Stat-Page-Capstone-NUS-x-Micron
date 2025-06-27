@@ -727,7 +727,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     entriesToUse.forEach(entry => {
       if (entry.error_name !== 'Unknown') {
         const location = this.extractErrorLocation(entry.error_description);
-        if (location === '853516') return; // Exclude this location from all visualizations
+        if (location.startsWith('8')) return; // Exclude all locations starting with '8'
         entry.error_location = location;
         // Count locations
         locationCounts[location] = (locationCounts[location] || 0) + 1;
@@ -746,7 +746,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
 
     // Only use filtered entries for errorLocationData and summary
     this.errorLocationData = Object.entries(locationCounts)
-      .filter(([location]) => location !== 'Unknown' && location !== '853516')
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
       .map(([location, count]) => ({
         name: location,
         value: count,
@@ -756,7 +756,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
 
     // Convert to equipment-specific format
     this.errorLocationByEquipmentData = Object.entries(locationByEquipment)
-      .filter(([location]) => location !== 'Unknown' && location !== '853516')
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
       .map(([location, equipmentCounts]) => ({
         name: location,
         series: Object.entries(equipmentCounts).map(([equip, count]) => ({
@@ -773,7 +773,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     // Generate detailed error location data for table
     this.errorLocationDetails = [];
     Object.entries(locationErrorDetails)
-      .filter(([location]) => location !== 'Unknown' && location !== '853516')
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
       .forEach(([location, errorCounts]) => {
         Object.entries(errorCounts).forEach(([errorName, count]) => {
           this.errorLocationDetails.push({

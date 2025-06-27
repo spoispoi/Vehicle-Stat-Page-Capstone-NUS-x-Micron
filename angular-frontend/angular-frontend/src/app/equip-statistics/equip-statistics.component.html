@@ -221,30 +221,6 @@
       <div class="col-lg-6">
         <div class="card chart-card chart-card-equal-height">
           <div class="card-body">
-            <h5 class="chart-title">📍 Error Locations by Equipment</h5>
-            <ngx-charts-bar-vertical-stacked
-              [results]="errorLocationByEquipmentData"
-              [xAxisLabel]="'Error Location'"
-              [legend]="true"
-              [legendPosition]="legendPosition"
-              [scheme]="colorScheme"
-              [xAxisTickFormatting]="formatXAxisTick"
-              [yAxisLabel]="'Count'"
-              [showXAxisLabel]="true"
-              [showYAxisLabel]="true"
-              [xAxis]="true"
-              [yAxis]="true"
-              [gradient]="true"
-              (select)="onErrorLocationBarSelect($event)">
-            </ngx-charts-bar-vertical-stacked>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="row g-4 mt-4" *ngIf="errorLocationDetails.length > 0">
-      <div class="col-12">
-        <div class="card chart-card">
-          <div class="card-body">
             <h5 class="chart-title">📍 Error Location Details</h5>
             <p class="text-muted mb-3">Detailed breakdown of errors by location</p>
             <div class="table-responsive">
@@ -259,7 +235,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let detail of (showAllErrorLocationDetails ? errorLocationDetails : errorLocationDetails.slice(0, 5)); let i = index" class="location-detail-row">
+                  <tr *ngFor="let detail of (showAllErrorLocationDetails ? errorLocationDetails : errorLocationDetails.slice(0, 5)); let i = index" class="location-detail-row details-expand-transition" [class.expanded]="showAllErrorLocationDetails">
                     <td>
                       <span class="rank-badge" [class.top-rank]="i < 3">{{ i + 1 }}</span>
                     </td>
