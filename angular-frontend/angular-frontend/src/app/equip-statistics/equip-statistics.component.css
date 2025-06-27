@@ -166,8 +166,41 @@ ngx-charts-advanced-pie-chart {
 }
 
 .alert-filter {
-  color: #f8f9fa;
-  border-left: none; /* Remove the specific left border */
+  background: rgba(30, 34, 44, 0.95);
+  border: 1.5px solid #ff4f4f;
+  box-shadow: 0 0 8px 2px #ff4f4f33;
+  color: #fff;
+  font-weight: 500;
+  position: relative;
+  animation: filterPulseRed 1.5s infinite alternate;
+}
+
+@keyframes filterPulseRed {
+  0% {
+    box-shadow: 0 0 8px 2px #ff4f4f33;
+    border-color: #ff4f4f;
+  }
+  100% {
+    box-shadow: 0 0 16px 4px #ff4f4f99;
+    border-color: #ff7f7f;
+  }
+}
+
+.alert-filter .filter-icon {
+  color: #ff4f4f;
+  animation: iconPulseRed 1.5s infinite alternate;
+  font-size: 1.2rem;
+  margin-right: 0.3em;
+}
+
+@keyframes iconPulseRed {
+  0% { color: #ff4f4f; text-shadow: 0 0 4px #ff4f4f66; }
+  100% { color: #ff7f7f; text-shadow: 0 0 12px #ff4f4fcc; }
+}
+
+.alert-filter .text-highlight {
+  color: #ff4f4f;
+  font-weight: 600;
 }
 
 .table-header th {
@@ -444,7 +477,136 @@ ngx-charts-advanced-pie-chart text:hover {
 }
 
 .recent-activity-notice .no-activity p {
-  color: rgba(207, 216, 220, 0.5);
+  margin: 0;
+  color: #95a5a6;
+}
+
+/* Error Location Badge Styling */
+.badge.bg-primary {
+  background-color: #007bff !important;
+  color: white !important;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.badge.bg-primary:hover {
+  background-color: #0056b3 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.text-muted {
+  color: #6c757d !important;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* Error Location Chart Enhancements */
+.error-location-chart {
+  background: rgba(40, 44, 52, 0.4);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* Error Location Details Table Styling */
+.location-detail-row {
+  transition: all 0.2s ease;
+}
+
+.location-detail-row:hover {
+  background-color: rgba(0, 123, 255, 0.1) !important;
+  transform: translateX(2px);
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #6c757d;
+  color: white;
+  font-weight: 600;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.rank-badge.top-rank {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #333;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+}
+
+.location-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.location-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.error-name {
+  /* Removed max-width and display:block to allow natural table expansion */
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.count-value {
+  font-weight: 600;
+  color: #00e5ff;
+  font-size: 1.1rem;
+}
+
+.btn-outline-primary {
+  border: 1px solid #007bff;
+  color: #007bff;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-primary:hover {
+  background-color: #007bff;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Responsive adjustments for the details table */
+@media (max-width: 768px) {
+  .error-name {
+    max-width: 200px;
+    font-size: 0.85rem;
+  }
+  
+  .percentage-bar {
+    height: 16px;
+  }
+  
+  .percentage-text {
+    font-size: 0.7rem;
+  }
+  
+  .btn-outline-primary {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
 }
 
 /* Responsive adjustments */
@@ -468,5 +630,31 @@ ngx-charts-advanced-pie-chart text:hover {
   .activity-main-info {
     justify-content: flex-start;
   }
+}
+
+/* Remove horizontal scroll on table hover */
+.table-responsive {
+  overflow-x: unset;
+}
+
+.table {
+  table-layout: auto;
+}
+
+.table th {
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.table td {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.chart-card-equal-height {
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 

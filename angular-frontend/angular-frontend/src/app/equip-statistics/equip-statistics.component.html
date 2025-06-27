@@ -60,37 +60,54 @@
   </div>
 
   <!-- Overview Cards -->
-  <div class="row g-4 mb-5 justify-content-center" *ngIf="!isLoading">
-    <div class="col-md-4">
+  <div class="row g-4 mb-4">
+    <div class="col-lg-3 col-md-6 col-12">
+      <!-- Days Since Last Error Card -->
       <div class="card stat-card">
         <div class="card-body text-center">
           <h6 class="stat-label">Days Since Last Error</h6>
-          <div class="stat-value days-value">{{ getDaysSinceLastError() }}</div>
-          <div class="stat-unit">days</div>
+          <div class="stat-value">{{ getDaysSinceLastError() }}</div>
+          <div class="stat-sub-info">days</div>
         </div>
       </div>
     </div>
-
-    <div class="col-md-4">
+    <div class="col-lg-3 col-md-6 col-12">
+      <!-- Most Common Error Name Card -->
       <div class="card stat-card">
-        <div class="card-body">
+        <div class="card-body text-center">
           <h6 class="stat-label">Most Common Error Name</h6>
-          <div class="stat-value stat-value-longtext">{{ statistics?.most_common_error_name || 'N/A' }}</div>
-          <div class="stat-count" *ngIf="statistics?.error_notes && statistics?.most_common_error_name">
-            {{ getErrorCount(statistics?.most_common_error_name) }} occurrences
-          </div>
+          <div class="stat-value stat-value-longtext">{{ statistics?.most_common_error_name }}</div>
+          <div class="stat-sub-info">{{ getErrorCount(statistics?.most_common_error_name) }} occurrence{{ getErrorCount(statistics?.most_common_error_name) === 1 ? '' : 's' }}</div>
         </div>
       </div>
     </div>
-
-    <!-- PM Count Card -->
-    <div class="col-md-4">
+    <div class="col-lg-3 col-md-6 col-12">
+      <!-- Preventive Maintenance Card -->
       <div class="card stat-card">
         <div class="card-body text-center">
           <h6 class="stat-label">🛠 Preventive Maintenance</h6>
           <div class="stat-value">{{ pmCount }}</div>
           <div class="stat-sub-info" *ngIf="latestPmDate">
             Latest: {{ formatDate(latestPmDate) | slice:0:10 }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6 col-12">
+      <!-- Most Common Error Location Card -->
+      <div class="card stat-card">
+        <div class="card-body text-center">
+          <h6 class="stat-label">📍 Most Common Error Location</h6>
+          <div class="stat-value stat-value-longtext">{{ mostCommonErrorLocation }}</div>
+          <div class="stat-sub-info mb-2">{{ uniqueErrorLocations }} unique locations</div>
+          <div *ngIf="mostCommonErrorLocationErrors.length > 0" class="mt-2">
+            <div class="fw-bold small text-muted mb-1">Corresponding Errors:</div>
+            <ul class="list-unstyled mb-0">
+              <li *ngFor="let err of mostCommonErrorLocationErrors">
+                <span class="text-accent">{{ err.name }}</span>
+                <span class="text-muted">({{ err.count }})</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -176,9 +193,105 @@
     <!-- Filter Alert -->
     <div *ngIf="selectedErrorName" class="alert alert-filter mt-5 d-flex justify-content-between align-items-center px-4 py-3 rounded">
       <div>
-        🔍 <strong>Filtered by:</strong> <span class="text-highlight">{{ selectedErrorName }}</span>
+        <span class="filter-icon">🔍</span> <strong>Filtered by:</strong> <span class="text-highlight">{{ selectedErrorName }}</span>
       </div>
       <button class="btn btn-sm btn-outline-light" (click)="clearErrorFilter()">✖ Clear Filter</button>
+    </div>
+
+    <!-- Error Location Charts and Details (moved above Error Entries) -->
+    <div class="row g-4 mt-4" *ngIf="errorLocationData.length > 0">
+      <div class="col-lg-6">
+        <div class="card chart-card chart-card-equal-height">
+          <div class="card-body">
+            <h5 class="chart-title">📍 Error Locations Distribution</h5>
+            <ngx-charts-pie-chart
+              [results]="errorLocationData"
+              [gradient]="true"
+              [scheme]="colorScheme"
+              [legend]="true"
+              [legendPosition]="legendPosition"
+              [labels]="true"
+              [doughnut]="false"
+              [arcWidth]="0.6"
+              (select)="onErrorLocationSelect($event)">
+            </ngx-charts-pie-chart>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card chart-card chart-card-equal-height">
+          <div class="card-body">
+            <h5 class="chart-title">📍 Error Locations by Equipment</h5>
+            <ngx-charts-bar-vertical-stacked
+              [results]="errorLocationByEquipmentData"
+              [xAxisLabel]="'Error Location'"
+              [legend]="true"
+              [legendPosition]="legendPosition"
+              [scheme]="colorScheme"
+              [xAxisTickFormatting]="formatXAxisTick"
+              [yAxisLabel]="'Count'"
+              [showXAxisLabel]="true"
+              [showYAxisLabel]="true"
+              [xAxis]="true"
+              [yAxis]="true"
+              [gradient]="true"
+              (select)="onErrorLocationBarSelect($event)">
+            </ngx-charts-bar-vertical-stacked>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4 mt-4" *ngIf="errorLocationDetails.length > 0">
+      <div class="col-12">
+        <div class="card chart-card">
+          <div class="card-body">
+            <h5 class="chart-title">📍 Error Location Details</h5>
+            <p class="text-muted mb-3">Detailed breakdown of errors by location</p>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead class="table-header">
+                  <tr>
+                    <th>Rank</th>
+                    <th>Error Location</th>
+                    <th>Error Name</th>
+                    <th>Count</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let detail of (showAllErrorLocationDetails ? errorLocationDetails : errorLocationDetails.slice(0, 5)); let i = index" class="location-detail-row">
+                    <td>
+                      <span class="rank-badge" [class.top-rank]="i < 3">{{ i + 1 }}</span>
+                    </td>
+                    <td>
+                      <span class="badge bg-primary location-badge">{{ detail.location }}</span>
+                    </td>
+                    <td>
+                      <span class="error-name">{{ detail.errorName }}</span>
+                    </td>
+                    <td>
+                      <span class="count-value">{{ detail.count }}</span>
+                    </td>
+                    <td>
+                      <button 
+                        class="btn btn-sm btn-outline-primary" 
+                        (click)="filterByLocationAndError(detail.location, detail.errorName)"
+                        title="Filter entries by this location and error">
+                        🔍 Filter
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="d-flex justify-content-center mt-2">
+                <button *ngIf="errorLocationDetails.length > 5" class="btn btn-link" (click)="showAllErrorLocationDetails = !showAllErrorLocationDetails">
+                  {{ showAllErrorLocationDetails ? 'See Less' : 'See More' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Entries Table -->
@@ -199,18 +312,32 @@
                     <th>State In Date</th>
                     <th>Event Code</th>
                     <th>Error Name</th>
+                    <th>Error Location</th>
                     <th>Error Description</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let entry of filteredEntries">
+                  <tr *ngFor="let entry of (showAllErrorEntries ? filteredEntries : filteredEntries.slice(0, 5))">
                     <td>{{ formatDate(entry.state_in_date) }}</td>
                     <td>{{ entry.event_code }}</td>
                     <td>{{ entry.error_name }}</td>
+                    <td>
+                      <span class="badge bg-primary" *ngIf="entry.error_location && entry.error_location !== 'Unknown'">
+                        {{ entry.error_location }}
+                      </span>
+                      <span class="text-muted" *ngIf="!entry.error_location || entry.error_location === 'Unknown'">
+                        Unknown
+                      </span>
+                    </td>
                     <td>{{ entry.error_description }}</td>
                   </tr>
                 </tbody>
               </table>
+              <div class="d-flex justify-content-center mt-2">
+                <button *ngIf="filteredEntries.length > 5" class="btn btn-link" (click)="showAllErrorEntries = !showAllErrorEntries">
+                  {{ showAllErrorEntries ? 'See Less' : 'See More' }}
+                </button>
+              </div>
             </div>
 
           </div>
