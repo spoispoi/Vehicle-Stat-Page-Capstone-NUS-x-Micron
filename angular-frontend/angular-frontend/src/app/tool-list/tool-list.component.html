@@ -282,4 +282,118 @@
   </button>
 </div>
 
+<!-- Error Location Leaderboard Section -->
+<div class="container-fluid mt-5" *ngIf="!isLoading && errorLocationData.length > 0">
+  <div class="card leaderboard-card">
+    <div class="card-body">
+      <h3 class="section-title">📍 Top Error Locations Leaderboard</h3>
+      <p class="text-muted small mb-3">Error count by location across all equipment</p>
+      <div class="table-responsive">
+        <ng-container *ngIf="!showAllLeaderboard">
+          <table #collapsedTable class="table align-middle leaderboard-table">
+            <thead class="table-header">
+              <tr>
+                <th style="width: 80px;">Rank</th>
+                <th style="width: 200px;">Error Location</th>
+                <th style="width: 300px;">Top 3 Error Names</th>
+                <th style="width: 100px; text-align: left;">Count</th>
+                <th style="width: 120px;">% of Total</th>
+                <th style="width: 180px;">Most Recent Error</th>
+                <th style="width: 160px;">Most Recent Error Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let detail of errorLocationDetails.slice(0, 10); let i = index" class="location-detail-row">
+                <td>
+                  <span class="rank-badge" [class.top-rank]="i < 3">{{ i + 1 }}</span>
+                </td>
+                <td>
+                  <span class="location-name">{{ detail.location }}</span>
+                </td>
+                <td>
+                  <div class="top-errors">
+                    <div *ngFor="let error of detail.topErrors; let j = index" class="error-item">
+                      <span class="error-name">{{ error.name }} <span class="error-count">({{ error.count }})</span></span>
+                    </div>
+                    <div *ngIf="detail.topErrors.length === 0" class="no-errors">
+                      No specific errors
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: left;">
+                  <span class="count-value">{{ detail.count }}</span>
+                </td>
+                <td>
+                  <span class="percentage-value">{{ detail.percentage.toFixed(1) }}%</span>
+                </td>
+                <td>
+                  <span class="most-recent-error">{{ detail.most_recent_error }}</span>
+                </td>
+                <td>
+                  <span class="most-recent-date">{{ detail.most_recent_date }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </ng-container>
+        <ng-container *ngIf="showAllLeaderboard">
+          <div class="leaderboard-scroll" [style.minHeight.px]="collapsedTableHeight">
+            <table class="table align-middle leaderboard-table">
+              <thead class="table-header">
+                <tr>
+                  <th style="width: 80px;">Rank</th>
+                  <th style="width: 200px;">Error Location</th>
+                  <th style="width: 300px;">Top 3 Error Names</th>
+                  <th style="width: 100px; text-align: left;">Count</th>
+                  <th style="width: 120px;">% of Total</th>
+                  <th style="width: 180px;">Most Recent Error</th>
+                  <th style="width: 160px;">Most Recent Error Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let detail of errorLocationDetails; let i = index" class="location-detail-row">
+                  <td>
+                    <span class="rank-badge" [class.top-rank]="i < 3">{{ i + 1 }}</span>
+                  </td>
+                  <td>
+                    <span class="location-name">{{ detail.location }}</span>
+                  </td>
+                  <td>
+                    <div class="top-errors">
+                      <div *ngFor="let error of detail.topErrors; let j = index" class="error-item">
+                        <span class="error-name">{{ error.name }} <span class="error-count">({{ error.count }})</span></span>
+                      </div>
+                      <div *ngIf="detail.topErrors.length === 0" class="no-errors">
+                        No specific errors
+                      </div>
+                    </div>
+                  </td>
+                  <td style="text-align: left;">
+                    <span class="count-value">{{ detail.count }}</span>
+                  </td>
+                  <td>
+                    <span class="percentage-value">{{ detail.percentage.toFixed(1) }}%</span>
+                  </td>
+                  <td>
+                    <span class="most-recent-error">{{ detail.most_recent_error }}</span>
+                  </td>
+                  <td>
+                    <span class="most-recent-date">{{ detail.most_recent_date }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ng-container>
+      </div>
+      <!-- See More/See Less Button for Leaderboard Table -->
+      <div class="text-center mt-2">
+        <button class="see-more-btn" (click)="toggleLeaderboard()">
+          {{ showAllLeaderboard ? 'See Less' : 'See More' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 

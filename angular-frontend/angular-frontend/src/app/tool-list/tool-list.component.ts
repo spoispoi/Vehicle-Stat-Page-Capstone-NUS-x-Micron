@@ -1,9 +1,9 @@
-import { Component, OnInit, Inject, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, Inject, CUSTOM_ELEMENTS_SCHEMA, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { ToolService } from '../tool.service';
 import { Renderer2 } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
-import { Color, NgxChartsModule, ScaleType } from '@swimlane/ngx-charts';
+import { Color, NgxChartsModule, ScaleType, LegendPosition } from '@swimlane/ngx-charts';
 import { trigger, state, style, animate, transition } from '@angular/animations';
 import { DateFilterComponent, DateRange } from '../components/date-filter/date-filter.component';
 
@@ -43,7 +43,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     ])
   ]
 })
-export class ToolListComponent implements OnInit {
+export class ToolListComponent implements OnInit, AfterViewInit {
   tools: any[] = [];
   filteredTools: any[] = [];
   toolsRaw: any[] = [];
@@ -126,7 +126,12 @@ export class ToolListComponent implements OnInit {
     name: 'equipTopCount'
   };
   
+  legendPosition: LegendPosition = LegendPosition.Right;
   
+  showAllLeaderboard: boolean = false;
+
+  @ViewChild('collapsedTable') collapsedTableRef!: ElementRef<HTMLTableElement>;
+  collapsedTableHeight: number = 0;
 
   constructor(
     private toolService: ToolService,
@@ -143,6 +148,10 @@ export class ToolListComponent implements OnInit {
         this.selectedErrorName = this.top10ErrorData[0].name;
       }
     }, 0);
+  }
+
+  ngAfterViewInit(): void {
+    this.setCollapsedTableHeight();
   }
 
   loadTools(): void {
@@ -218,6 +227,7 @@ export class ToolListComponent implements OnInit {
 
     this.calculateKpiData(tools, errorCounts, equipIdErrorCounts);
     this.processLocationKpi(tools);
+    this.processErrorLocations(); // Process error locations for leaderboard
     this.debugMonthlyData(tools); // checking for chart data first months low
     this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // checking for chart data first months low
     // Calculate top 10 equipment IDs once
@@ -816,7 +826,7 @@ export class ToolListComponent implements OnInit {
     this.selectedEquipName = null;
   }
 
-  private extractErrorLocation(description: string): string {
+  extractErrorLocation(description: string): string {
     if (!description || description.trim() === '') {
       return 'Unknown';
     }
@@ -890,6 +900,15 @@ export class ToolListComponent implements OnInit {
 
   showAllTools: boolean = false;
 
+  // Error location properties for leaderboard
+  errorLocationData: { name: string; value: number; equipment: string }[] = [];
+  errorLocationDetails: { location: string; errorName: string; count: number; percentage: number; equipment: string; topErrors: { name: string; count: number }[]; most_recent_error: string; most_recent_date: string }[] = [];
+  totalErrorLocations: number = 0;
+  uniqueErrorLocations: number = 0;
+  mostCommonErrorLocation: string = 'N/A';
+  mostCommonErrorLocationErrors: { name: string; count: number }[] = [];
+  showAllErrorLocationDetails: boolean = false;
+
   get visibleTools(): any[] {
     // Show 14 cards by default, show all if toggled
     return this.showAllTools ? this.filteredTools : this.filteredTools.slice(0, 14);
@@ -901,5 +920,135 @@ export class ToolListComponent implements OnInit {
 
   trackByEquipId(index: number, tool: any): string {
     return tool.equip_id;
+  }
+
+  // Process error locations for leaderboard
+  processErrorLocations(): void {
+    const locationCounts: { [location: string]: number } = {};
+    const locationErrorDetails: { [location: string]: { [errorName: string]: number } } = {};
+    const locationToolsMap: { [location: string]: any[] } = {};
+
+    // Single pass: group tools by location
+    this.toolsRaw.forEach(tool => {
+      if (tool.error_name && tool.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(tool.error_description);
+        if (location.startsWith('8')) return; // Exclude all locations starting with '8'
+
+        // Count locations
+        locationCounts[location] = (locationCounts[location] || 0) + 1;
+
+        // Count by error name for each location
+        if (!locationErrorDetails[location]) {
+          locationErrorDetails[location] = {};
+        }
+        locationErrorDetails[location][tool.error_name] = (locationErrorDetails[location][tool.error_name] || 0) + 1;
+
+        // Group tools by location for fast lookup
+        if (!locationToolsMap[location]) {
+          locationToolsMap[location] = [];
+        }
+        locationToolsMap[location].push(tool);
+      }
+    });
+
+    // Generate error location data for pie chart
+    this.errorLocationData = Object.entries(locationCounts)
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
+      .map(([location, count]) => ({
+        name: location,
+        value: count,
+        equipment: 'All Equipment'
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    // Calculate total count for percentage calculation
+    const totalLocationCount = Object.values(locationCounts).reduce((sum, count) => sum + count, 0);
+
+    // Generate location data for table with top 3 error names
+    this.errorLocationDetails = [];
+    Object.entries(locationCounts)
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
+      .forEach(([location, count]) => {
+        // Get top 3 error names for this location
+        const errorCounts = locationErrorDetails[location] || {};
+        const topErrors = Object.entries(errorCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([errorName, errorCount]) => ({ name: errorName, count: errorCount }));
+
+        // Get most recent error and date for this location (fast lookup)
+        let mostRecentError = 'N/A';
+        let mostRecentDate = 'N/A';
+        const locationTools = locationToolsMap[location] || [];
+        if (locationTools.length > 0) {
+          const mostRecentTool = locationTools.reduce((a, b) => new Date(a.state_in_date) > new Date(b.state_in_date) ? a : b);
+          mostRecentError = mostRecentTool.error_name;
+          mostRecentDate = this.formatDate(mostRecentTool.state_in_date);
+        }
+
+        this.errorLocationDetails.push({
+          location: location,
+          errorName: 'All Errors',
+          count: count,
+          percentage: totalLocationCount > 0 ? (count / totalLocationCount) * 100 : 0,
+          equipment: 'All Equipment',
+          topErrors: topErrors,
+          most_recent_error: mostRecentError,
+          most_recent_date: mostRecentDate
+        });
+      });
+
+    // Sort by count descending
+    this.errorLocationDetails.sort((a, b) => b.count - a.count);
+    // Limit to top 100 locations for performance
+    this.errorLocationDetails = this.errorLocationDetails.slice(0, 100);
+
+    // Calculate statistics
+    this.totalErrorLocations = this.errorLocationData.reduce((sum, loc) => sum + loc.value, 0);
+    this.uniqueErrorLocations = this.errorLocationData.length;
+    this.mostCommonErrorLocation = this.errorLocationData.length > 0 ? this.errorLocationData[0].name : 'N/A';
+
+    // Find all error names and counts for the most common error location
+    if (this.mostCommonErrorLocation !== 'N/A') {
+      const errorMap: { [name: string]: number } = {};
+      this.toolsRaw.forEach(tool => {
+        if (tool.error_name && tool.error_name !== 'Unknown') {
+          const location = this.extractErrorLocation(tool.error_description);
+          if (location === this.mostCommonErrorLocation) {
+            errorMap[tool.error_name] = (errorMap[tool.error_name] || 0) + 1;
+          }
+        }
+      });
+      this.mostCommonErrorLocationErrors = Object.entries(errorMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+    } else {
+      this.mostCommonErrorLocationErrors = [];
+    }
+
+    console.log('Error locations processed for general page:', {
+      totalLocations: this.totalErrorLocations,
+      uniqueLocations: this.uniqueErrorLocations,
+      mostCommon: this.mostCommonErrorLocation,
+      locationData: this.errorLocationData,
+      details: this.errorLocationDetails
+    });
+  }
+
+  toggleLeaderboard(): void {
+    if (!this.showAllLeaderboard) {
+      this.setCollapsedTableHeight();
+      setTimeout(() => {
+        this.showAllLeaderboard = true;
+      });
+    } else {
+      this.showAllLeaderboard = false;
+    }
+  }
+
+  setCollapsedTableHeight(): void {
+    if (this.collapsedTableRef && this.collapsedTableRef.nativeElement) {
+      this.collapsedTableHeight = this.collapsedTableRef.nativeElement.offsetHeight;
+    }
   }
 }
