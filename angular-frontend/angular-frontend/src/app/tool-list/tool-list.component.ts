@@ -133,6 +133,27 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   @ViewChild('collapsedTable') collapsedTableRef!: ElementRef<HTMLTableElement>;
   collapsedTableHeight: number = 0;
 
+  // Error location properties for leaderboard
+  errorLocationData: { name: string; value: number; equipment: string }[] = [];
+  errorLocationDetails: { location: string; errorName: string; count: number; percentage: number; equipment: string; topErrors: { name: string; count: number }[]; most_recent_error: string; most_recent_date: string }[] = [];
+  totalErrorLocations: number = 0;
+  uniqueErrorLocations: number = 0;
+  mostCommonErrorLocation: string = 'N/A';
+  mostCommonErrorLocationErrors: { name: string; count: number }[] = [];
+  showAllErrorLocationDetails: boolean = false;
+
+  // Top Error Locations Horizontal Bar Chart properties
+  topErrorLocationsData: any[] = [];
+  selectedLocationName: string | null = null;
+  locationToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
+
+  colorSchemeLocationTopCount: Color = {
+    domain: [], // Will be populated dynamically like colorSchemeTopCount
+    group: ScaleType.Ordinal,
+    selectable: true,
+    name: 'locationTopCount'
+  };
+
   constructor(
     private toolService: ToolService,
     private renderer: Renderer2,
@@ -146,6 +167,10 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       if (this.top10ErrorData && this.top10ErrorData.length > 0) {
         this.selectedErrorName = this.top10ErrorData[0].name;
+      }
+      // Open the summary card for the top location by default
+      if (this.topErrorLocationsData && this.topErrorLocationsData.length > 0) {
+        this.selectedLocationName = this.topErrorLocationsData[0].name;
       }
     }, 0);
   }
@@ -300,6 +325,18 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
     this.filteredErrorTypes = [...this.allErrorTypes]; // Initialize filteredErrorTypes
     this.generateMultiLineChart();
+
+    // Load location data for top 5 locations (similar to Top 10 Errors)
+    this.topErrorLocationsData.slice(0, 5).forEach(location => {
+      setTimeout(() => {
+        this.locationToErrorMap[location.name] = this.getErrorsForLocation(location.name);
+      }, 300);
+    });
+
+    // Set the default summary card to the top location after data is ready
+    if (!this.selectedLocationName && this.topErrorLocationsData.length > 0) {
+      this.selectedLocationName = this.topErrorLocationsData[0].name;
+    }
   }
 
   toggleDarkMode(): void {
@@ -826,6 +863,57 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.selectedEquipName = null;
   }
 
+  // Location bar chart methods
+  onLocationBarSelect(event: any) {
+    const locationName = event.name;
+    if (this.selectedLocationName === locationName) {
+      this.selectedLocationName = null;
+    } else if (this.selectedLocationName) {
+      // Animate out, then in
+      const prev = this.selectedLocationName;
+      this.selectedLocationName = null;
+      setTimeout(() => {
+        this.selectedLocationName = locationName;
+        if (!this.locationToErrorMap[locationName]) {
+          this.getErrorsForLocation(locationName);
+        }
+      }, 220); // match your :leave animation duration
+    } else {
+      this.selectedLocationName = locationName;
+      if (!this.locationToErrorMap[locationName]) {
+        this.getErrorsForLocation(locationName);
+      }
+    }
+  }
+
+  closeLocationSummaryPanel() {
+    this.selectedLocationName = null;
+  }
+
+  getErrorsForLocation(locationName: string): { name: string; value: number }[] {
+    if (this.locationToErrorMap[locationName]) {
+      return this.locationToErrorMap[locationName];
+    }
+
+    const locationErrors: { [errorName: string]: number } = {};
+    
+    this.toolsRaw.forEach(tool => {
+      if (tool.error_name && tool.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(tool.error_description);
+        if (location === locationName) {
+          locationErrors[tool.error_name] = (locationErrors[tool.error_name] || 0) + 1;
+        }
+      }
+    });
+
+    const errors = Object.entries(locationErrors)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    this.locationToErrorMap[locationName] = errors;
+    return errors;
+  }
+
   extractErrorLocation(description: string): string {
     if (!description || description.trim() === '') {
       return 'Unknown';
@@ -900,15 +988,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   showAllTools: boolean = false;
 
-  // Error location properties for leaderboard
-  errorLocationData: { name: string; value: number; equipment: string }[] = [];
-  errorLocationDetails: { location: string; errorName: string; count: number; percentage: number; equipment: string; topErrors: { name: string; count: number }[]; most_recent_error: string; most_recent_date: string }[] = [];
-  totalErrorLocations: number = 0;
-  uniqueErrorLocations: number = 0;
-  mostCommonErrorLocation: string = 'N/A';
-  mostCommonErrorLocationErrors: { name: string; count: number }[] = [];
-  showAllErrorLocationDetails: boolean = false;
-
   get visibleTools(): any[] {
     // Show 14 cards by default, show all if toggled
     return this.showAllTools ? this.filteredTools : this.filteredTools.slice(0, 14);
@@ -960,6 +1039,21 @@ export class ToolListComponent implements OnInit, AfterViewInit {
         equipment: 'All Equipment'
       }))
       .sort((a, b) => b.value - a.value);
+
+    // Generate top error locations data for horizontal bar chart (top 10)
+    this.topErrorLocationsData = Object.entries(locationCounts)
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
+      .map(([location, count]) => ({
+        name: location,
+        value: count
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+
+    // Set the dynamic color scheme for location chart (same as Top 10 Errors)
+    this.colorSchemeLocationTopCount.domain = this.topErrorLocationsData.map((item, index) => 
+      index === 0 ? '#ff6347' : '#484848' // Top location in tomato color, others in dark gray
+    );
 
     // Calculate total count for percentage calculation
     const totalLocationCount = Object.values(locationCounts).reduce((sum, count) => sum + count, 0);

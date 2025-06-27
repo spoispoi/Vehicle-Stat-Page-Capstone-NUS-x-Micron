@@ -396,4 +396,45 @@
   </div>
 </div>
 
+<!-- Section: Top Error Locations -->
+<div class="flex-row-scroll mt-5" *ngIf="!isLoading">
+  <div class="scroll-chart">
+    <h3 class="section-title">Top 10 Error Locations</h3>
+    <div class="chart-summary-flex">
+      <div class="chart-panel" [class.shrunk]="selectedLocationName">
+        <ngx-charts-bar-horizontal
+          [view]="[1200, 500]"
+          [scheme]="colorSchemeLocationTopCount"
+          [results]="topErrorLocationsData"
+          [xAxis]="true"
+          [yAxis]="true"
+          [xAxisLabel]="'Error Count'"
+          [yAxisLabel]="'Location'"
+          [legend]="false"
+          [showDataLabel]="true"
+          [trimYAxisTicks]="false"
+          class="white-labels"
+          (select)="onLocationBarSelect($event)">
+        </ngx-charts-bar-horizontal>
+      </div>
+      <div class="sidebar-list">
+        <ng-container *ngIf="selectedLocationName as locationKey">
+          <div class="minimal-summary-panel" [@fadeSlideLeft]="locationKey">
+            <div class="d-flex align-items-center mb-2">
+              <span class="summary-error-name">{{ locationKey }}</span>
+            </div>
+            <ul class="list-unstyled minimal-summary-list mb-0">
+              <li *ngFor="let sub of locationToErrorMap[locationKey]">
+                <span class="vehicle-name">{{ sub.name }}</span>
+                <span class="badge vehicle-count-badge ms-2">{{ sub.value }}</span>
+              </li>
+            </ul>
+            <div *ngIf="!locationToErrorMap[locationKey]?.length" class="text-muted small mt-2">No data.</div>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</div>
+
 
