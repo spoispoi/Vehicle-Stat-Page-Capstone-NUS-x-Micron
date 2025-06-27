@@ -675,6 +675,7 @@ g.axis line,
   grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
   align-items: flex-start;
+  margin-bottom: 3.5rem;
 }
 
 .kpi-card {
@@ -858,4 +859,22 @@ g.axis line,
   padding: 0.1em 0.5em;
   font-size: 1.1em;
   line-height: 1;
+}
+
+.see-more-btn {
+  padding: 0.32em 1.2em;
+  border-radius: 10px;
+  background: #5caaff;
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.04em;
+  border: 1px solid #388be0;
+  transition: background 0.14s, color 0.14s, border 0.14s, transform 0.12s cubic-bezier(0.4,0,0.2,1);
+  outline: none;
+}
+.see-more-btn:hover, .see-more-btn:focus {
+  background: #388be0;
+  color: #fff;
+  border-color: #2666a3;
+  transform: scale(1.03);
 }

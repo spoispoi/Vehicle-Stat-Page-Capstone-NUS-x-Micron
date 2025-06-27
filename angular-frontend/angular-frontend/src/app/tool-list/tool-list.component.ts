@@ -31,6 +31,15 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
       transition(':leave', [
         animate('200ms cubic-bezier(0.4,0,0.2,1)', style({ opacity: 0, transform: 'translateX(-40px)' }))
       ])
+    ]),
+    trigger('fadeInOut', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(30px)' }),
+        animate('90ms cubic-bezier(0.4,0,0.2,1)', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('70ms cubic-bezier(0.4,0,0.2,1)', style({ opacity: 0, transform: 'translateY(30px)' }))
+      ])
     ])
   ]
 })
@@ -78,8 +87,10 @@ export class ToolListComponent implements OnInit {
   topOccurringErrorName: string = 'N/A';
   topEquipment: string = 'N/A';
   topErrorForTopEquipment: string = 'N/A';
-
-
+  topLocation: string = 'N/A';
+  topLocationCount: number = 0;
+  topLocationPercent: number = 0;
+  topLocationTopErrors: { name: string; count: number }[] = [];
 
   isDarkMode: boolean = false;
 
@@ -206,6 +217,7 @@ export class ToolListComponent implements OnInit {
     const errorCounts = this.calculateErrorCounts(tools);
 
     this.calculateKpiData(tools, errorCounts, equipIdErrorCounts);
+    this.processLocationKpi(tools);
     this.debugMonthlyData(tools); // checking for chart data first months low
     this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // checking for chart data first months low
     // Calculate top 10 equipment IDs once
@@ -802,5 +814,92 @@ export class ToolListComponent implements OnInit {
 
   closeEquipSummaryPanel() {
     this.selectedEquipName = null;
+  }
+
+  private extractErrorLocation(description: string): string {
+    if (!description || description.trim() === '') {
+      return 'Unknown';
+    }
+    // Pattern 1: Standard format with error code and location
+    const pattern1 = /^\d+:\s+\d+\s+([A-Z0-9]+)\s+V\d+/;
+    const match1 = description.match(pattern1);
+    if (match1) {
+      return match1[1];
+    }
+    // Pattern 4: Template format without standard structure
+    const pattern4 = /(\d+:\s+\d+\s+[A-Z0-9]+\s+V\d+)/;
+    const match4 = description.match(pattern4);
+    if (match4) {
+      const locationMatch = match4[1].match(/\d+:\s+\d+\s+([A-Z0-9]+)\s+V\d+/);
+      if (locationMatch) {
+        return locationMatch[1];
+      }
+    }
+    // Pattern 5: Look for any sequence of uppercase letters and numbers that might be a location
+    const pattern5 = /\b([A-Z0-9]{6,12})\b/g;
+    const matches = [...description.matchAll(pattern5)];
+    const excludePatterns = [
+      /^MOHTA/, /^V\d+$/, /^ALARM/, /^ERROR/, /^TEMPLATE/, /^START/, /^END$/, /^RECOVERY/, /^TROUBLESHOOT/, /^POSSIBLE/
+    ];
+    for (const match of matches) {
+      const candidate = match[1];
+      const isExcluded = excludePatterns.some(pattern => pattern.test(candidate));
+      if (!isExcluded && candidate.length >= 6) {
+        return candidate;
+      }
+    }
+    return 'Unknown';
+  }
+
+  private processLocationKpi(tools: any[]): void {
+    const locationCounts: { [location: string]: number } = {};
+    let total = 0;
+    const errorMap: { [location: string]: { [error: string]: number } } = {};
+    tools.forEach(tool => {
+      if (tool.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(tool.error_description);
+        if (location.startsWith('8')) return; // Exclude all locations starting with '8'
+        if (location !== 'Unknown' && location.length > 0) {
+          locationCounts[location] = (locationCounts[location] || 0) + 1;
+          total++;
+          if (!errorMap[location]) errorMap[location] = {};
+          errorMap[location][tool.error_name] = (errorMap[location][tool.error_name] || 0) + 1;
+        }
+      }
+    });
+    const sorted = Object.entries(locationCounts)
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
+      .sort((a, b) => b[1] - a[1]);
+    if (sorted.length > 0) {
+      this.topLocation = sorted[0][0];
+      this.topLocationCount = sorted[0][1];
+      this.topLocationPercent = total > 0 ? Math.round((this.topLocationCount / total) * 100) : 0;
+      // Get top 3 errors for this location
+      const errorCounts = errorMap[this.topLocation] || {};
+      this.topLocationTopErrors = Object.entries(errorCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+    } else {
+      this.topLocation = 'N/A';
+      this.topLocationCount = 0;
+      this.topLocationPercent = 0;
+      this.topLocationTopErrors = [];
+    }
+  }
+
+  showAllTools: boolean = false;
+
+  get visibleTools(): any[] {
+    // Show 14 cards by default, show all if toggled
+    return this.showAllTools ? this.filteredTools : this.filteredTools.slice(0, 14);
+  }
+
+  toggleShowAllTools(): void {
+    this.showAllTools = !this.showAllTools;
+  }
+
+  trackByEquipId(index: number, tool: any): string {
+    return tool.equip_id;
   }
 }
