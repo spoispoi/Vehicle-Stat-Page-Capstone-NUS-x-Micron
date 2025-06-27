@@ -5,6 +5,7 @@
   height: 100%;
 }
 
+
 .filter-card {
   background: rgba(40, 44, 52, 0.3); /* Semi-transparent dark blue */
   border: 1px solid rgba(62, 68, 76, 0.4);
@@ -90,7 +91,7 @@
 .form-control {
   background-color: #0d1117;
   border: 1px solid #30363d;
-  color: #f0f6fc;
+  color: #f0f6fc !important;
   font-size: 0.875rem;
   border-radius: 6px;
   padding: 0.375rem 0.75rem;
@@ -99,6 +100,48 @@
 .form-control:focus {
   border-color: #58a6ff;
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+  color: #f0f6fc !important;
+}
+
+/* Specific styling for date inputs */
+input[type="date"] {
+  color: #f0f6fc !important;
+  background-color: #0d1117 !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  color: #f0f6fc !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: #f0f6fc !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  color: #f0f6fc !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  color: #f0f6fc !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #f0f6fc !important;
+}
+
+/* For Firefox */
+input[type="date"]::-moz-placeholder {
+  color: #8b949e !important;
+}
+
+/* Ensure placeholder text is visible */
+.form-control::placeholder {
+  color: #8b949e !important;
 }
 
 /* Buttons */

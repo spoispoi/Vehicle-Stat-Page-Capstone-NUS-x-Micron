@@ -191,7 +191,8 @@ export class ToolListComponent implements OnInit {
     const errorCounts = this.calculateErrorCounts(tools);
 
     this.calculateKpiData(tools, errorCounts, equipIdErrorCounts);
-
+    this.debugMonthlyData(tools); // checking for chart data first months low
+    this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // checking for chart data first months low
     // Calculate top 10 equipment IDs once
     this.top10EquipIds = Object.entries(equipIdErrorCounts)
       .sort((a, b) => b[1] - a[1])
@@ -395,11 +396,28 @@ export class ToolListComponent implements OnInit {
   }
 
   calculateMonthlyErrorTrend(tools: any[]): any[] {
+    console.log('Calculating monthly error trend from tools:', tools.length);
+    console.log('Date filters applied:', { startDate: this.startDate, endDate: this.endDate });
+    
     const map: { [month: string]: number } = {};
     const uniqueCombinations: { [month: string]: Set<string> } = {};
     
+    // Parse date filters
+    const startDateObj = this.startDate ? new Date(this.startDate) : null;
+    const endDateObj = this.endDate ? new Date(this.endDate) : null;
+    
     tools.forEach(t => {
       if (t.error_name !== 'Unknown') {
+        const toolDate = new Date(t.state_in_date);
+        
+        // Apply date filtering to trend data
+        if (startDateObj && toolDate < startDateObj) {
+          return; // Skip data before start date
+        }
+        if (endDateObj && toolDate > endDateObj) {
+          return; // Skip data after end date
+        }
+        
         const month = this.getLocalMonthKey(t.state_in_date);
         
         if (!uniqueCombinations[month]) {
@@ -413,8 +431,13 @@ export class ToolListComponent implements OnInit {
         }
       }
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value }))
+  
+    const result = Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
       .sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
+    
+    console.log('Filtered trend data:', result);
+    return result;
   }
 
   formatTop10ChartData(counts: { [key: string]: number }): any[] {
@@ -515,14 +538,24 @@ export class ToolListComponent implements OnInit {
   generateMultiLineChart(): void {
     const map: { [error: string]: { [month: string]: number } } = {};
     const uniqueCombinations: { [error: string]: { [month: string]: Set<string> } } = {};
+    
     this.selectedErrorTypes.forEach(e => {
       map[e] = {};
       uniqueCombinations[e] = {};
     });
   
+    // Apply date filtering to multi-line chart as well
+    const startDateObj = this.startDate ? new Date(this.startDate) : null;
+    const endDateObj = this.endDate ? new Date(this.endDate) : null;
+  
     this.toolsRaw.forEach(t => {
       const e = t.error_name;
       if (!this.selectedErrorTypes.includes(e)) return;
+      
+      // Apply date filtering
+      const toolDate = new Date(t.state_in_date);
+      if (startDateObj && toolDate < startDateObj) return;
+      if (endDateObj && toolDate > endDateObj) return;
       
       const monthKey = this.getLocalMonthKey(t.state_in_date);
       
@@ -637,5 +670,40 @@ export class ToolListComponent implements OnInit {
 
   isTop10Tool(equipId: string): boolean {
     return this.top10EquipIds.includes(equipId);
+  }
+  private debugMonthlyData(tools: any[]): void {
+    console.log('=== DEBUGGING MONTHLY DATA ===');
+    
+    // Group by month to see raw counts
+    const monthlyBreakdown: { [key: string]: any[] } = {};
+    
+    tools.forEach(tool => {
+      if (tool.error_name !== 'Unknown' && tool.state_in_date) {
+        const dateStr = tool.state_in_date.split('T')[0];
+        const [year, month] = dateStr.split('-');
+        const monthKey = `${year}-${month}`;
+        
+        if (!monthlyBreakdown[monthKey]) {
+          monthlyBreakdown[monthKey] = [];
+        }
+        monthlyBreakdown[monthKey].push(tool);
+      }
+    });
+  
+    // Log details for each month
+    Object.keys(monthlyBreakdown).sort().forEach(monthKey => {
+      const monthData = monthlyBreakdown[monthKey];
+      const uniqueErrors = new Set();
+      
+      monthData.forEach(tool => {
+        uniqueErrors.add(`${tool.state_in_date}_${tool.error_name}`);
+      });
+      
+      console.log(`Month ${monthKey}:`);
+      console.log(`  - Raw records: ${monthData.length}`);
+      console.log(`  - Unique errors: ${uniqueErrors.size}`);
+      console.log(`  - Date range: ${monthData[0]?.state_in_date} to ${monthData[monthData.length-1]?.state_in_date}`);
+      console.log(`  - Sample dates:`, monthData.slice(0, 3).map(t => t.state_in_date));
+    });
   }
 }

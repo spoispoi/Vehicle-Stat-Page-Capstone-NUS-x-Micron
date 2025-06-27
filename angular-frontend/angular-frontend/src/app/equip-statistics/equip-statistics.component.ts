@@ -134,7 +134,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
         this.statistics = data;
         this.transformData(data);
         this.loadToolEntries();
-        // Load complete entries for Most Recent Activity card (independent of date filters)
+        // Load complete entries for cards that should be independent of date filters
         this.loadCompleteEntries();
         this.isLoading = false;
       },
@@ -154,6 +154,48 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       }
     });
   }
+  
+  loadCompleteEntries(): void {
+    // Load the complete dataset without date filters for cards that should be independent
+    const url = `http://127.0.0.1:8000/api/tools/?equip_id=${this.equipId}`;
+    console.log('Loading complete entries from URL:', url);
+    
+    this.http.get<any[]>(url).subscribe({
+      next: (tools) => {
+        console.log('Complete entries received:', tools);
+        // Process the complete dataset
+        const allEntries: Entry[] = tools.map(tool => ({
+          state_in_date: tool.state_in_date,
+          event_code: tool.event_code,
+          error_name: tool.error_name,
+          error_description: tool.error_description
+        }));
+        
+        // Store complete error entries (excluding PM) for "Days Since Last Error" calculation
+        this.completeEntries = this.sortEntries(allEntries.filter((e) => e.error_name !== 'Unknown'));
+        
+        // Filter out PM entries from complete dataset (independent of date filters)
+        this.pmEntries = this.sortEntries(allEntries.filter((e) => e.error_name === 'Unknown'));
+        this.pmCount = this.pmEntries.length;
+        this.latestPmDate = this.pmEntries.length > 0 ? this.pmEntries[0].state_in_date : null;
+        
+        // Update the most recent entry
+        this.loadMostRecentEntry();
+        
+        console.log('Complete entries processed:', this.completeEntries.length);
+        console.log('PM entries (unfiltered):', this.pmEntries.length);
+      },
+      error: (error) => {
+        console.error('Error loading complete entries:', error);
+        this.completeEntries = [];
+        this.pmEntries = [];
+        this.pmCount = 0;
+        this.latestPmDate = null;
+        this.mostRecentEntry = null;
+      }
+    });
+  }
+
 
   loadToolEntries(): void {
     // Load actual tool entries for the equipment
@@ -185,58 +227,112 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     });
   }
 
+  // processToolEntries(tools: any[]): void {
+  //   console.log('Raw tools data from backend:', tools);
+    
+  //   // Convert tools to entries format
+  //   const allEntries: Entry[] = tools.map(tool => {
+  //     console.log('Processing tool:', tool);
+  //     console.log('Raw state_in_date:', tool.state_in_date);
+  //     return {
+  //       state_in_date: tool.state_in_date,
+  //       event_code: tool.event_code,
+  //       error_name: tool.error_name,
+  //       error_description: tool.error_description
+  //     };
+  //   });
+
+  //   console.log('Processed entries:', allEntries);
+
+  //   // Separate error entries from PM entries and sort by date (most recent first)
+  //   this.entries = this.sortEntries(allEntries.filter((e) => e.error_name !== 'Unknown'));
+  //   this.filteredEntries = this.entries; // Initially show all error entries
+    
+  //   // Set PM entries (entries with 'Unknown' error name)
+  //   this.pmEntries = this.sortEntries(allEntries.filter((e) => e.error_name === 'Unknown'));
+
+  //   // Update PM count and latest date
+  //   this.pmCount = this.pmEntries.length;
+  //   this.latestPmDate = this.pmEntries.length > 0 ? this.pmEntries[0].state_in_date : null;
+
+  //   console.log('Final processed entries:', {
+  //     totalEntries: allEntries.length,
+  //     errorEntries: this.entries.length,
+  //     pmEntries: this.pmEntries.length,
+  //     filteredEntries: this.filteredEntries.length,
+  //     sampleEntry: this.entries[0],
+  //     mostRecentEntry: this.mostRecentEntry
+  //   });
+  // }
+
+  // // populateStatistics method removed - data is now displayed directly in template
+
+  // onDateRangeChange(dateRange: DateRange): void {
+  //   this.startDate = dateRange.startDate;
+  //   this.endDate = dateRange.endDate;
+  //   this.loadStatistics();
+  // }
+
+  // onFilterCleared(): void {
+  //   this.startDate = '';
+  //   this.endDate = '';
+  //   this.loadStatistics();
+  // }
+
   processToolEntries(tools: any[]): void {
-    console.log('Raw tools data from backend:', tools);
+    console.log('Processing filtered tool entries:', tools.length);
     
-    // Convert tools to entries format
-    const allEntries: Entry[] = tools.map(tool => {
-      console.log('Processing tool:', tool);
-      console.log('Raw state_in_date:', tool.state_in_date);
-      return {
-        state_in_date: tool.state_in_date,
-        event_code: tool.event_code,
-        error_name: tool.error_name,
-        error_description: tool.error_description
-      };
-    });
-
-    console.log('Processed entries:', allEntries);
-
-    // Separate error entries from PM entries and sort by date (most recent first)
-    this.entries = this.sortEntries(allEntries.filter((e) => e.error_name !== 'Unknown'));
-    this.filteredEntries = this.entries; // Initially show all error entries
+    // Process filtered entries for the entries table display
+    const allEntries: Entry[] = tools.map(tool => ({
+      state_in_date: tool.state_in_date,
+      event_code: tool.event_code,
+      error_name: tool.error_name,
+      error_description: tool.error_description
+    }));
+  
+    // Store all filtered entries
+    this.entries = this.sortEntries(allEntries);
     
-    // Set PM entries (entries with 'Unknown' error name)
-    this.pmEntries = this.sortEntries(allEntries.filter((e) => e.error_name === 'Unknown'));
-
-    // Update PM count and latest date
-    this.pmCount = this.pmEntries.length;
-    this.latestPmDate = this.pmEntries.length > 0 ? this.pmEntries[0].state_in_date : null;
-
-    console.log('Final processed entries:', {
-      totalEntries: allEntries.length,
-      errorEntries: this.entries.length,
-      pmEntries: this.pmEntries.length,
-      filteredEntries: this.filteredEntries.length,
-      sampleEntry: this.entries[0],
-      mostRecentEntry: this.mostRecentEntry
-    });
+    // Apply additional filters for the entries table display
+    this.applyDateFilters();
+    
+    console.log('Filtered entries processed:', this.entries.length);
+    console.log('Filtered entries for display:', this.filteredEntries.length);
   }
-
-  // populateStatistics method removed - data is now displayed directly in template
-
+  
+  private applyDateFilters(): void {
+    // Start with all entries (which are already date-filtered from the API)
+    let filtered = [...this.entries];
+    
+    // Filter out PM entries from the main entries table
+    this.filteredEntries = this.sortEntries(filtered.filter((e) => e.error_name !== 'Unknown'));
+    
+    // Apply error name filter if selected
+    if (this.selectedErrorName) {
+      this.filteredEntries = this.filteredEntries.filter(entry => 
+        entry.error_name === this.selectedErrorName
+      );
+    }
+  }
+  
   onDateRangeChange(dateRange: DateRange): void {
+    console.log('Date range changed:', dateRange);
     this.startDate = dateRange.startDate;
     this.endDate = dateRange.endDate;
+    
+    // Reload statistics with date filters (affects statistics cards and charts)
     this.loadStatistics();
+    // Note: loadCompleteEntries() is called within loadStatistics() and is not affected by date filters
   }
-
+  
   onFilterCleared(): void {
     this.startDate = '';
     this.endDate = '';
+    
+    // Reload statistics without date filters
     this.loadStatistics();
+    // Note: loadCompleteEntries() is called within loadStatistics() and will reload complete data
   }
-
   // setDateRange method removed - functionality now in date filter component
 
   sortEntries(entries: Entry[]): Entry[] {
@@ -412,14 +508,14 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   onErrorSelect(event: any) {
     this.selectedErrorName = event.name;
     this.filteredEntries = this.sortEntries(
-      this.entries.filter((entry) => entry.error_name === event.name)
+      this.entries.filter((entry) => entry.error_name === event.name && entry.error_name !== 'Unknown')
     );
     this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
   }
 
   clearErrorFilter(): void {
     this.selectedErrorName = null;
-    this.filteredEntries = this.sortEntries(this.entries);
+    this.filteredEntries = this.sortEntries(this.entries.filter((e) => e.error_name !== 'Unknown'));
   }
 
   onMonthSelect(event: any): void {
@@ -428,7 +524,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       // This handles a legend click, filtering by the error name.
       this.selectedErrorName = event;
       this.filteredEntries = this.sortEntries(
-        this.entries.filter((entry) => entry.error_name === this.selectedErrorName)
+        this.entries.filter((entry) => entry.error_name === this.selectedErrorName && entry.error_name !== 'Unknown')
       );
     } 
     // A bar click event returns an object with details
@@ -446,7 +542,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
           // Parse date string directly to avoid timezone conversion
           const dateStr = entry.state_in_date.split('T')[0];
           const [entryYear, entryMonth] = dateStr.split('-').map(Number);
-          return entryYear === parseInt(year) && (entryMonth - 1) === monthIndex;
+          return entryYear === parseInt(year) && (entryMonth - 1) === monthIndex && entry.error_name !== 'Unknown';
         })
       );
       // Set the filter description to the selected month
@@ -468,7 +564,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
         // Parse date string directly to avoid timezone conversion
         const dateStr = entry.state_in_date.split('T')[0];
         const [entryYear, entryMonth] = dateStr.split('-').map(Number);
-        return entryYear === parseInt(year) && (entryMonth - 1) === monthIndex;
+        return entryYear === parseInt(year) && (entryMonth - 1) === monthIndex && entry.error_name !== 'Unknown';
       })
     );
 
@@ -499,10 +595,10 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
 
   getDaysSinceLastError(): number {
     // Use complete dataset instead of filtered data to be independent of date filter
-    if (!this.entries || this.entries.length === 0) return -1;
+    if (!this.completeEntries || this.completeEntries.length === 0) return -1;
     
     // Sort entries by date to get the most recent error
-    const sortedEntries = this.sortEntries([...this.entries]);
+    const sortedEntries = this.sortEntries([...this.completeEntries]);
     const lastErrorDate = new Date(sortedEntries[0].state_in_date);
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - lastErrorDate.getTime());
@@ -526,34 +622,34 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     }
   }
 
-  loadCompleteEntries(): void {
-    // Load the complete dataset without date filters for the Most Recent Activity card
-    const url = `http://127.0.0.1:8000/api/tools/?equip_id=${this.equipId}`;
-    console.log('Loading complete entries from URL:', url);
+  // loadCompleteEntries(): void {
+  //   // Load the complete dataset without date filters for the Most Recent Activity card
+  //   const url = `http://127.0.0.1:8000/api/tools/?equip_id=${this.equipId}`;
+  //   console.log('Loading complete entries from URL:', url);
     
-    this.http.get<any[]>(url).subscribe({
-      next: (tools) => {
-        console.log('Complete entries received:', tools);
-        // Process the complete dataset
-        const allEntries: Entry[] = tools.map(tool => ({
-          state_in_date: tool.state_in_date,
-          event_code: tool.event_code,
-          error_name: tool.error_name,
-          error_description: tool.error_description
-        }));
+  //   this.http.get<any[]>(url).subscribe({
+  //     next: (tools) => {
+  //       console.log('Complete entries received:', tools);
+  //       // Process the complete dataset
+  //       const allEntries: Entry[] = tools.map(tool => ({
+  //         state_in_date: tool.state_in_date,
+  //         event_code: tool.event_code,
+  //         error_name: tool.error_name,
+  //         error_description: tool.error_description
+  //       }));
         
-        // Filter out PM entries and sort by date (most recent first)
-        this.completeEntries = this.sortEntries(allEntries.filter((e) => e.error_name !== 'Unknown'));
-        console.log('Complete entries processed:', this.completeEntries.length);
+  //       // Filter out PM entries and sort by date (most recent first)
+  //       this.completeEntries = this.sortEntries(allEntries.filter((e) => e.error_name !== 'Unknown'));
+  //       console.log('Complete entries processed:', this.completeEntries.length);
         
-        // Update the most recent entry
-        this.loadMostRecentEntry();
-      },
-      error: (error) => {
-        console.error('Error loading complete entries:', error);
-        this.completeEntries = [];
-        this.mostRecentEntry = null;
-      }
-    });
-  }
+  //       // Update the most recent entry
+  //       this.loadMostRecentEntry();
+  //     },
+  //     error: (error) => {
+  //       console.error('Error loading complete entries:', error);
+  //       this.completeEntries = [];
+  //       this.mostRecentEntry = null;
+  //     }
+  //   });
+  // }
 }

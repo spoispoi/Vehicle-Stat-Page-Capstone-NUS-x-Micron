@@ -266,18 +266,20 @@
   <div class="tool-card" 
        *ngFor="let tool of filteredTools"
        [class.top-10-tool]="isTop10Tool(tool.equip_id)">
-    <div class="tool-header">
-      <h5 class="tool-id">
-        {{ tool.equip_id }}
-        <span class="top-10-badge" *ngIf="isTop10Tool(tool.equip_id)">🔥 TOP 10</span>
-      </h5>
+    <div class="tool-card-content">
+      <div class="tool-header">
+        <h5 class="tool-id">
+          {{ tool.equip_id }}
+          <span class="top-10-badge" *ngIf="isTop10Tool(tool.equip_id)">🔥 TOP 10</span>
+        </h5>
+      </div>
+      <div class="tool-body">
+        <p><span class="label">🛠 Most Recent Error:</span><br>{{ tool.most_recent_error || 'N/A' }}</p>
+        <p><span class="label">📅 Most Recent Error Date:</span><br>{{ tool.most_recent_date || 'N/A' }}</p>
+        <p><span class="label">📊 Total Errors:</span><br><span class="error-count">{{ tool.error_count }}</span></p>
+      </div>
     </div>
-    <div class="tool-body">
-      <p><span class="label">🛠 Most Recent Error:</span><br>{{ tool.most_recent_error || 'N/A' }}</p>
-      <p><span class="label">📅 Most Recent Error Date:</span><br>{{ tool.most_recent_date || 'N/A' }}</p>
-      <p><span class="label">📊 Total Errors:</span><br><span class="error-count">{{ tool.error_count }}</span></p>
-    </div>
-    <div class="tool-footer">
+    <div class="tool-card-actions">
       <button class="btn btn-primary w-100" (click)="navigateToStatistics(tool.equip_id)">View Statistics</button>
     </div>
   </div>

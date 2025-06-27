@@ -1,24 +1,51 @@
+
 <div class="date-filter-container">
   <div class="card filter-card">
     <div class="card-body">
       <h6 class="filter-title">📅 Date Filter</h6>
       
-      <!-- Status Alert -->
-      <div *ngIf="isFilterApplied || earliestDate" class="alert" [ngClass]="{'alert-info': isFilterApplied, 'alert-success': !isFilterApplied}">
-        <div *ngIf="isFilterApplied">{{ getFilterDescription() }}</div>
+      <!-- Status Alert - Always show -->
+      <div class="alert" [ngClass]="{'alert-info': isFilterApplied, 'alert-success': !isFilterApplied}">
+        <div *ngIf="isFilterApplied && getFilterDescription()">{{ getFilterDescription() }}</div>
         <div *ngIf="!isFilterApplied">
-          Showing all data
-          <div *ngIf="earliestDate"><small>from: {{ formatDate(earliestDate) }}</small></div>
+          No date filter applied
+          <div *ngIf="earliestDate"><small>Earliest Date: {{ formatDate(earliestDate) }}</small></div>
+          <div *ngIf="!earliestDate"><small>Loading earliest date...</small></div>
         </div>
       </div>
 
       <!-- Quick Ranges -->
       <div class="quick-ranges-grid">
-        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('all')">All Time</button>
-        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('week')">Last Week</button>
-        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('month')">Last Month</button>
-        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('quarter')">3 Months</button>
-        <button class="btn btn-outline-primary btn-sm" (click)="setQuickRange('year')">1 Year</button>
+        <button 
+          class="btn btn-sm" 
+          [ngClass]="{'btn-primary': activeQuickRange === 'all', 'btn-outline-primary': activeQuickRange !== 'all'}"
+          (click)="setQuickRange('all')">
+          All Time
+        </button>
+        <button 
+          class="btn btn-sm" 
+          [ngClass]="{'btn-primary': activeQuickRange === 'week', 'btn-outline-primary': activeQuickRange !== 'week'}"
+          (click)="setQuickRange('week')">
+          Last Week
+        </button>
+        <button 
+          class="btn btn-sm" 
+          [ngClass]="{'btn-primary': activeQuickRange === 'month', 'btn-outline-primary': activeQuickRange !== 'month'}"
+          (click)="setQuickRange('month')">
+          Last Month
+        </button>
+        <button 
+          class="btn btn-sm" 
+          [ngClass]="{'btn-primary': activeQuickRange === 'quarter', 'btn-outline-primary': activeQuickRange !== 'quarter'}"
+          (click)="setQuickRange('quarter')">
+          3 Months
+        </button>
+        <button 
+          class="btn btn-sm" 
+          [ngClass]="{'btn-primary': activeQuickRange === 'year', 'btn-outline-primary': activeQuickRange !== 'year'}"
+          (click)="setQuickRange('year')">
+          1 Year
+        </button>
       </div>
       
       <!-- Custom Controls Row -->
@@ -39,4 +66,4 @@
 
     </div>
   </div>
-</div> 
+</div>

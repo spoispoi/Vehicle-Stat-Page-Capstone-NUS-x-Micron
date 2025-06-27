@@ -27,7 +27,7 @@ export class AppComponent {
   errorNotesData: any[] = [];
   equipId: string = '';
   //constructor(private route: ActivatedRoute, private statisticsService: StatisticsService) {}
-  
+  errorLocationsData: any[] = [];
   statistics: any = null; // Holds the fetched statistics data
   equipEntries: any[] = []; // Holds the list of tool entries for the equip_id
   isBrowser: boolean; // Indicates if running in the browser
@@ -88,3 +88,4 @@ export class AppComponent {
     }));
   }
 }
+
