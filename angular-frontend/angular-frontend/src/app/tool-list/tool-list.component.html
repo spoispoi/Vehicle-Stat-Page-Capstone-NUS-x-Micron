@@ -45,50 +45,38 @@
   <div class="flex-row-scroll mt-5" *ngIf="!isLoading">
     <div class="scroll-chart">
       <h3 class="section-title">Top 10 Errors</h3>
-      <div class="scroll-container">
-        <ngx-charts-bar-horizontal
-          [view]="[1200, 500]"
-          [scheme]="colorSchemeTopCount"
-          [results]="top10ErrorData"
-          [xAxis]="true"
-          [yAxis]="true"
-          [xAxisLabel]="'Error Count'"
-          [yAxisLabel]="'Error Type'"
-          [legend]="false"
-          [showDataLabel]="true"
-          [trimYAxisTicks]="false"
-          class="white-labels">
-        </ngx-charts-bar-horizontal>
-      </div>
-    </div>
-    <div class="sidebar-list">
-      <h3 class="section-title">Top 5 Summary</h3>
-      <div class="accordion">
-        <div class="accordion-item" *ngFor="let item of top10ErrorData.slice(0, 5); let i = index">
-          <div class="accordion-header" (click)="toggleError(i)">
-            <div class="error-name">{{ item.name }}</div>
-            <div class="d-flex align-items-center">
-              <span class="badge error-count-badge">{{ item.value }}</span>
-              <span class="chevron-icon" [class.rotate]="expandedErrorIndex === i">▼</span>
-            </div>
-          </div>
-          <div class="accordion-content" [@collapseAnimation]="expandedErrorIndex === i ? 'expanded' : 'collapsed'">
-            <div *ngIf="errorRowLoading[item.name]" class="text-center my-2">
-              <div class="spinner-border text-primary spinner-border-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
+      <div class="chart-summary-flex">
+        <div class="chart-panel" [class.shrunk]="selectedErrorName">
+          <ngx-charts-bar-horizontal
+            [view]="[1200, 500]"
+            [scheme]="colorSchemeTopCount"
+            [results]="top10ErrorData"
+            [xAxis]="true"
+            [yAxis]="true"
+            [xAxisLabel]="'Error Count'"
+            [yAxisLabel]="'Error Type'"
+            [legend]="false"
+            [showDataLabel]="true"
+            [trimYAxisTicks]="false"
+            class="white-labels"
+            (select)="onBarSelect($event)">
+          </ngx-charts-bar-horizontal>
+        </div>
+        <div class="sidebar-list">
+          <ng-container *ngIf="selectedErrorName as errorKey">
+            <div class="minimal-summary-panel" [@fadeSlideLeft]="errorKey">
+              <div class="d-flex align-items-center mb-2">
+                <span class="summary-error-name">{{ errorKey }}</span>
               </div>
+              <ul class="list-unstyled minimal-summary-list mb-0">
+                <li *ngFor="let sub of errorToEquipMap[errorKey]">
+                  <span class="vehicle-name">{{ sub.name }}</span>
+                  <span class="badge vehicle-count-badge ms-2">{{ sub.value }}</span>
+                </li>
+              </ul>
+              <div *ngIf="!errorToEquipMap[errorKey]?.length" class="text-muted small mt-2">No data.</div>
             </div>
-            <ul class="list-unstyled ms-2 vehicle-list"
-                *ngIf="!errorRowLoading[item.name] && (errorToEquipMap[item.name]?.length || 0) > 0; else noVehicles">
-              <li *ngFor="let sub of errorToEquipMap[item.name]">
-                <span class="vehicle-name">▸ {{ sub.name }}</span>
-                <span class="badge vehicle-count-badge">{{ sub.value }}</span>
-              </li>
-            </ul>
-            <ng-template #noVehicles>
-              <p class="text-muted small ms-2">No matching data found.</p>
-            </ng-template>
-          </div>
+          </ng-container>
         </div>
       </div>
     </div>
@@ -99,52 +87,39 @@
 <div class="flex-row-scroll" *ngIf="!isLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Top Equipment by Error Count</h3>
-    <div class="scroll-container" style="overflow-x: auto; overflow-y: hidden; max-width: 100%; height: 560px; padding-bottom: 4rem;">
-      <ngx-charts-bar-vertical
-        [view]="[1200, 520]" 
-        [scheme]="colorSchemeEquipTopCount"
-        [results]="top20Equipments"
-        [xAxis]="true"
-        [yAxis]="true"
-        [xAxisLabel]="'Equipment ID'"
-        [yAxisLabel]="'Error Count'"
-        [legend]="false"
-        [yAxisTickFormatting]="yAxisTickFormatting"
-        [showDataLabel]="true"
-        [trimXAxisTicks]="false"
-        class="white-labels">
-      </ngx-charts-bar-vertical>
-    </div>
-  </div>
-
-  <div class="sidebar-list">
-    <h3 class="section-title">Top 5 Equipment</h3>
-    <div class="accordion">
-      <div class="accordion-item" *ngFor="let item of top20Equipments.slice(0, 5); let i = index">
-        <div class="accordion-header" (click)="toggleEquip(i)">
-          <div class="error-name">{{ item.name }}</div>
-          <div class="d-flex align-items-center">
-            <span class="badge error-count-badge">{{ item.value }}</span>
-            <span class="chevron-icon" [class.rotate]="expandedEquipIndex === i">▼</span>
-          </div>
-        </div>
-        <div class="accordion-content" [@collapseAnimation]="expandedEquipIndex === i ? 'expanded' : 'collapsed'">
-          <div *ngIf="equipRowLoading[item.name]" class="text-center my-2">
-            <div class="spinner-border text-success spinner-border-sm" role="status">
-              <span class="visually-hidden">Loading...</span>
+    <div class="chart-summary-flex">
+      <div class="chart-panel" [class.shrunk]="selectedEquipName">
+        <ngx-charts-bar-vertical
+          [view]="[1200, 520]" 
+          [scheme]="colorSchemeEquipTopCount"
+          [results]="top20Equipments"
+          [xAxis]="true"
+          [yAxis]="true"
+          [xAxisLabel]="'Equipment ID'"
+          [yAxisLabel]="'Error Count'"
+          [legend]="false"
+          [yAxisTickFormatting]="yAxisTickFormatting"
+          [showDataLabel]="true"
+          [trimXAxisTicks]="false"
+          class="white-labels"
+          (select)="onEquipBarSelect($event)">
+        </ngx-charts-bar-vertical>
+      </div>
+      <div class="sidebar-list">
+        <ng-container *ngIf="selectedEquipName as equipKey">
+          <div class="minimal-summary-panel" [@fadeSlideLeft]="equipKey">
+            <div class="d-flex align-items-center mb-2">
+              <span class="summary-error-name">{{ equipKey }}</span>
             </div>
+            <ul class="list-unstyled minimal-summary-list mb-0">
+              <li *ngFor="let sub of equipToErrorMap[equipKey]">
+                <span class="vehicle-name">{{ sub.name }}</span>
+                <span class="badge vehicle-count-badge ms-2">{{ sub.value }}</span>
+              </li>
+            </ul>
+            <div *ngIf="!equipToErrorMap[equipKey]?.length" class="text-muted small mt-2">No data.</div>
           </div>
-          <ul class="list-unstyled ms-2 vehicle-list"
-              *ngIf="!equipRowLoading[item.name] && (equipToErrorMap[item.name]?.length || 0) > 0; else noEquipErrors">
-            <li *ngFor="let sub of equipToErrorMap[item.name]">
-              <span class="vehicle-name">▸ {{ sub.name }}</span>
-              <span class="badge vehicle-count-badge">{{ sub.value }}</span>
-            </li>
-          </ul>
-          <ng-template #noEquipErrors>
-            <p class="text-muted small ms-2">No matching errors found.</p>
-          </ng-template>
-        </div>
+        </ng-container>
       </div>
     </div>
   </div>

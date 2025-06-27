@@ -22,6 +22,15 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
       state('collapsed', style({ height: '0px', overflow: 'hidden', opacity: 0 })),
       state('expanded', style({ height: '*', opacity: 1 })),
       transition('collapsed <=> expanded', animate('300ms ease-in-out')),
+    ]),
+    trigger('fadeSlideLeft', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateX(40px)' }),
+        animate('300ms cubic-bezier(0.4,0,0.2,1)', style({ opacity: 1, transform: 'translateX(0)' }))
+      ]),
+      transition(':leave', [
+        animate('200ms cubic-bezier(0.4,0,0.2,1)', style({ opacity: 0, transform: 'translateX(-40px)' }))
+      ])
     ])
   ]
 })
@@ -117,6 +126,12 @@ export class ToolListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTools();
+    // Open the summary card for the top error by default
+    setTimeout(() => {
+      if (this.top10ErrorData && this.top10ErrorData.length > 0) {
+        this.selectedErrorName = this.top10ErrorData[0].name;
+      }
+    }, 0);
   }
 
   loadTools(): void {
@@ -206,6 +221,11 @@ export class ToolListComponent implements OnInit {
 
     this.top10ErrorData = this.formatTop10ChartData(errorCounts);
 
+    // Set the default summary card to the top error after data is ready
+    if (!this.selectedErrorName && this.top10ErrorData.length > 0) {
+      this.selectedErrorName = this.top10ErrorData[0].name;
+    }
+
     this.colorSchemeTopCount.domain = this.top10ErrorData.map((item, index) => 
       index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
     );
@@ -226,6 +246,11 @@ export class ToolListComponent implements OnInit {
 
     // Limit to top 20 equipments
     this.top20Equipments = this.equipIdErrorData.slice(0, 50);
+
+    // Set the default summary card to the top equipment after data is ready
+    if (!this.selectedEquipName && this.top20Equipments.length > 0) {
+      this.selectedEquipName = this.top20Equipments[0].name;
+    }
 
     this.colorSchemeEquipTopCount.domain = this.top20Equipments.map((item, index) => 
       index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
@@ -705,5 +730,77 @@ export class ToolListComponent implements OnInit {
       console.log(`  - Date range: ${monthData[0]?.state_in_date} to ${monthData[monthData.length-1]?.state_in_date}`);
       console.log(`  - Sample dates:`, monthData.slice(0, 3).map(t => t.state_in_date));
     });
+  }
+
+  selectedErrorName: string | null = null;
+
+  onBarSelect(event: any) {
+    const errorName = event.name;
+    if (this.selectedErrorName === errorName) {
+      this.selectedErrorName = null;
+    } else if (this.selectedErrorName) {
+      // Animate out, then in
+      const prev = this.selectedErrorName;
+      this.selectedErrorName = null;
+      setTimeout(() => {
+        this.selectedErrorName = errorName;
+        if (!this.errorToEquipMap[errorName]) {
+          this.errorRowLoading[errorName] = true;
+          setTimeout(() => {
+            this.errorToEquipMap[errorName] = this.getEquipmentsForError(errorName);
+            this.errorRowLoading[errorName] = false;
+          }, 300);
+        }
+      }, 220); // match your :leave animation duration
+    } else {
+      this.selectedErrorName = errorName;
+      if (!this.errorToEquipMap[errorName]) {
+        this.errorRowLoading[errorName] = true;
+        setTimeout(() => {
+          this.errorToEquipMap[errorName] = this.getEquipmentsForError(errorName);
+          this.errorRowLoading[errorName] = false;
+        }, 300);
+      }
+    }
+  }
+
+  closeSummaryPanel() {
+    this.selectedErrorName = null;
+  }
+
+  selectedEquipName: string | null = null;
+
+  onEquipBarSelect(event: any) {
+    const equipName = event.name;
+    if (this.selectedEquipName === equipName) {
+      this.selectedEquipName = null;
+    } else if (this.selectedEquipName) {
+      // Animate out, then in
+      const prev = this.selectedEquipName;
+      this.selectedEquipName = null;
+      setTimeout(() => {
+        this.selectedEquipName = equipName;
+        if (!this.equipToErrorMap[equipName]) {
+          this.equipRowLoading[equipName] = true;
+          setTimeout(() => {
+            this.equipToErrorMap[equipName] = this.getErrorsForEquip(equipName);
+            this.equipRowLoading[equipName] = false;
+          }, 300);
+        }
+      }, 220); // match your :leave animation duration
+    } else {
+      this.selectedEquipName = equipName;
+      if (!this.equipToErrorMap[equipName]) {
+        this.equipRowLoading[equipName] = true;
+        setTimeout(() => {
+          this.equipToErrorMap[equipName] = this.getErrorsForEquip(equipName);
+          this.equipRowLoading[equipName] = false;
+        }, 300);
+      }
+    }
+  }
+
+  closeEquipSummaryPanel() {
+    this.selectedEquipName = null;
   }
 }
