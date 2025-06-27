@@ -1316,4 +1316,80 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   
     this.generateLocationMultiLineChart();
   }
+
+  scrollToLocations(): void {
+    const element = document.querySelector('.locations-label');
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  }
+
+  hasActiveFilter(): boolean {
+    console.log('Checking for active filters:', {
+      startDate: this.startDate,
+      endDate: this.endDate
+    });
+    
+    const hasDateFilter = Boolean((this.startDate && this.startDate !== '') || 
+                                 (this.endDate && this.endDate !== ''));
+    
+    console.log('Date filter result:', hasDateFilter);
+    
+    return hasDateFilter;
+  }
+
+  getFilterIndicatorText(): string {
+    console.log('Getting filter indicator text:', {
+      startDate: this.startDate,
+      endDate: this.endDate
+    });
+    
+    // Only show date filter information
+    if (this.startDate && this.endDate) {
+      // Determine the quick range type
+      const today = new Date();
+      const startDateObj = new Date(this.startDate);
+      const endDateObj = new Date(this.endDate);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      if (endDateObj.toISOString().split('T')[0] === todayStr) {
+        const daysDiff = Math.floor((today.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
+        
+        console.log('Days difference:', daysDiff);
+        
+        if (daysDiff >= 6 && daysDiff <= 8) {
+          return 'Last Week';
+        } else if (daysDiff >= 28 && daysDiff <= 31) {
+          return 'Last Month';
+        } else if (daysDiff >= 89 && daysDiff <= 92) {
+          return 'Last Quarter';
+        } else if (daysDiff >= 364 && daysDiff <= 366) {
+          return 'Last Year';
+        } else {
+          return `Custom: ${this.formatDateForDisplay(this.startDate)} - ${this.formatDateForDisplay(this.endDate)}`;
+        }
+      } else {
+        return `Custom: ${this.formatDateForDisplay(this.startDate)} - ${this.formatDateForDisplay(this.endDate)}`;
+      }
+    } else if (this.startDate) {
+      return `From: ${this.formatDateForDisplay(this.startDate)}`;
+    } else if (this.endDate) {
+      return `To: ${this.formatDateForDisplay(this.endDate)}`;
+    }
+    
+    return 'No Date Filter';
+  }
+
+  private formatDateForDisplay(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  }
 }

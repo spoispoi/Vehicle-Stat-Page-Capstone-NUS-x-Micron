@@ -30,7 +30,7 @@
           Top Error: {{ topErrorForTopEquipment }}
         </div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card" (click)="scrollToLocations()" style="cursor: pointer;">
         <div class="kpi-label">Top Occurring Location</div>
         <div class="kpi-value">{{ topLocation }}</div>
         <div class="kpi-sub-value" *ngIf="topLocation !== 'N/A'">
@@ -57,6 +57,7 @@
   <!-- Section: Top 10 Errors -->
   <div class="flex-row-scroll mt-5" *ngIf="!isLoading">
     <div class="scroll-chart">
+      <div class="hardware-label">Hardware</div>
       <h3 class="section-title">Top 10 Errors</h3>
       <div class="chart-summary-flex">
         <div class="chart-panel" [class.shrunk]="selectedErrorName">
@@ -275,15 +276,19 @@
 </div>
 <div class="d-flex justify-content-center mt-2" *ngIf="filteredTools.length > 14">
   <button class="see-more-btn" (click)="toggleShowAllTools()">
-    <span style="font-size:1.2em;vertical-align:middle;margin-right:0.5em;">
-      {{ showAllTools ? '▲' : '▼' }}
-    </span>
     {{ showAllTools ? 'See Less' : 'See More' }}
   </button>
 </div>
 
 <!-- Error Location Leaderboard Section -->
-<div class="container-fluid mt-5" *ngIf="!isLoading && errorLocationData.length > 0">
+<div class="locations-label">
+  Locations
+  <span class="filter-indicator" *ngIf="hasActiveFilter()">
+    <i class="fas fa-filter"></i>
+    {{ getFilterIndicatorText() }}
+  </span>
+</div>
+<div id="locations-section" class="container-fluid" *ngIf="!isLoading && errorLocationData.length > 0">
   <div class="card leaderboard-card">
     <div class="card-body">
       <h3 class="section-title">📍 Top Error Locations Leaderboard</h3>

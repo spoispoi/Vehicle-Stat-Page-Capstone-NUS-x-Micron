@@ -665,7 +665,31 @@ ngx-charts-advanced-pie-chart text:hover {
   opacity: 1;
 }
 .details-expand-transition.expanded {
-  max-height: 1200px;
-  opacity: 1;
+  max-height: none;
+}
+
+/* See More Button Styles */
+.see-more-btn {
+  padding: 0.32em 1.2em;
+  border-radius: 10px;
+  background: #5caaff;
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.04em;
+  border: 1px solid #388be0;
+  transition: background 0.18s cubic-bezier(0.4,0,0.2,1), color 0.18s cubic-bezier(0.4,0,0.2,1), border 0.14s, transform 0.12s cubic-bezier(0.4,0,0.2,1);
+  outline: none;
+}
+
+.see-more-btn:hover, .see-more-btn:focus {
+  background-color: #388be0;
+  color: #f0f6fc;
+  transform: translateY(-1px);
+}
+
+.see-more-btn:active {
+  background: #5caaff;
+  color: #fff;
+  border: 1px solid #388be0;
 }
 

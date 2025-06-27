@@ -260,7 +260,7 @@
                 </tbody>
               </table>
               <div class="d-flex justify-content-center mt-2">
-                <button *ngIf="errorLocationDetails.length > 5" class="btn btn-link" (click)="showAllErrorLocationDetails = !showAllErrorLocationDetails">
+                <button *ngIf="errorLocationDetails.length > 5" class="see-more-btn" (click)="showAllErrorLocationDetails = !showAllErrorLocationDetails">
                   {{ showAllErrorLocationDetails ? 'See Less' : 'See More' }}
                 </button>
               </div>
@@ -310,7 +310,7 @@
                 </tbody>
               </table>
               <div class="d-flex justify-content-center mt-2">
-                <button *ngIf="filteredEntries.length > 5" class="btn btn-link" (click)="showAllErrorEntries = !showAllErrorEntries">
+                <button *ngIf="filteredEntries.length > 5" class="see-more-btn" (click)="showAllErrorEntries = !showAllErrorEntries">
                   {{ showAllErrorEntries ? 'See Less' : 'See More' }}
                 </button>
               </div>
