@@ -437,4 +437,55 @@
   </div>
 </div>
 
+<!-- Section: Error Location Trends -->
+<div class="flex-row-scroll mt-5" *ngIf="!isLoading">
+  <div class="scroll-chart">
+    <h3 class="section-title">Error Location Trends by Month</h3>
+    <!-- Filter Notification -->
+    <div class="filter-notification" *ngIf="appliedLocationFilter">
+      <span class="filter-badge">{{ appliedLocationFilter }}</span>
+    </div>
+    <div class="scroll-container">
+      <ngx-charts-line-chart
+        [view]="[1200, 500]"
+        [scheme]="colorScheme"
+        [results]="errorLocationTrendMultiLineData"
+        [xAxis]="true"
+        [yAxis]="true"
+        [legend]="true"
+        [showGridLines]="true"
+        [roundDomains]="true"
+        [xAxisLabel]="'Month'"
+        [yAxisLabel]="'Error Count'">
+      </ngx-charts-line-chart>
+    </div>
+  </div>
+  <div class="sidebar-list">
+    <h3 class="section-title">Filter Locations for Location Trend</h3>
+    <div class="custom-dropdown">
+      <button class="dropdown-toggle-button" (click)="showLocationDropdown = !showLocationDropdown">
+        <span>Select Locations</span>
+        <span class="chevron-icon" [class.rotate]="showLocationDropdown">▼</span>
+      </button>
+      <div class="dropdown-content" [@collapseAnimation]="showLocationDropdown ? 'expanded' : 'collapsed'">
+        <div class="dropdown-search">
+          <input type="text" class="form-control" placeholder="Search Locations" (input)="onSearchLocation($event)" />
+        </div>
+        <div class="error-list">
+          <div class="form-check" *ngFor="let location of filteredLocationTypes; let i = index">
+            <input class="form-check-input" type="checkbox" [id]="'location-' + i"
+                   [checked]="selectedLocationTypes.includes(location)"
+                   (change)="onLocationTypeToggle(location)">
+            <label class="form-check-label" [for]="'location-' + i">{{ location }}</label>
+          </div>
+        </div>
+        <div class="dropdown-actions">
+          <button class="btn btn-action btn-danger" (click)="clearAllLocations()">Unselect All</button>
+          <button class="btn btn-action btn-success" (click)="selectTopLocations()">Select Top 5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 

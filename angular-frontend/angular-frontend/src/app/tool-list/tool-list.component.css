@@ -1080,13 +1080,33 @@ g.axis line,
 }
 
 .leaderboard-scroll {
-  max-height: 500px;
+  max-height: 400px;
   overflow-y: auto;
-  width: 100%;
 }
 
 .most-recent-error, .most-recent-date {
-  color: #c9d1d9;
+  font-size: 0.9em;
+  color: #8b949e;
+}
+
+/* Filter Notification Styles */
+.filter-notification {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.filter-badge {
+  display: inline-block;
+  background-color: #238636;
+  color: #ffffff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
   font-weight: 500;
-  font-size: 1em;
+  border: 1px solid #2ea043;
+}
+
+.filter-badge:hover {
+  background-color: #2ea043;
+  border-color: #3fb950;
 }

@@ -154,6 +154,15 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     name: 'locationTopCount'
   };
 
+  // Error Location Trend Chart properties
+  errorLocationTrendMultiLineData: any[] = [];
+  allLocationTypes: string[] = [];
+  selectedLocationTypes: string[] = [];
+  searchLocationTerm: string = '';
+  filteredLocationTypes: string[] = [];
+  showLocationDropdown: boolean = false;
+  appliedLocationFilter: string = '';
+
   constructor(
     private toolService: ToolService,
     private renderer: Renderer2,
@@ -325,6 +334,38 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
     this.filteredErrorTypes = [...this.allErrorTypes]; // Initialize filteredErrorTypes
     this.generateMultiLineChart();
+
+    // Initialize location types for location trend chart
+    this.allLocationTypes = [...new Set(tools.map(t => {
+      const location = this.extractErrorLocation(t.error_description);
+      return location;
+    }).filter(location => location && location !== 'Unknown' && !location.startsWith('8') && location.length > 0))];
+    
+    // Select the top 5 locations by count
+    const locationCounts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
+    tools.forEach(t => {
+      if (t.error_name && t.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(t.error_description);
+        if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
+        
+        const uniqueKey = `${t.state_in_date}_${location}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          locationCounts[location] = (locationCounts[location] || 0) + 1;
+        }
+      }
+    });
+    
+    // Select the top 5 locations by count
+    this.selectedLocationTypes = Object.entries(locationCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5) // Select top 5 locations
+      .map(([name]) => name);
+    
+    this.filteredLocationTypes = [...this.allLocationTypes]; // Initialize filteredLocationTypes
+    this.generateLocationMultiLineChart();
 
     // Load location data for top 5 locations (similar to Top 10 Errors)
     this.topErrorLocationsData.slice(0, 5).forEach(location => {
@@ -877,12 +918,17 @@ export class ToolListComponent implements OnInit, AfterViewInit {
         if (!this.locationToErrorMap[locationName]) {
           this.getErrorsForLocation(locationName);
         }
+        // Filter the trend chart to this location
+        this.selectedLocationTypes = [locationName];
+        this.generateLocationMultiLineChart();
       }, 220); // match your :leave animation duration
     } else {
       this.selectedLocationName = locationName;
       if (!this.locationToErrorMap[locationName]) {
         this.getErrorsForLocation(locationName);
       }
+      // Filter the trend chart to this location
+      this.selectedLocationTypes = [locationName];
     }
   }
 
@@ -1144,5 +1190,130 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     if (this.collapsedTableRef && this.collapsedTableRef.nativeElement) {
       this.collapsedTableHeight = this.collapsedTableRef.nativeElement.offsetHeight;
     }
+  }
+
+  // Location trend chart methods
+  onLocationTypeToggle(location: string): void {
+    const index = this.selectedLocationTypes.indexOf(location);
+    if (index > -1) {
+      this.selectedLocationTypes.splice(index, 1);
+    } else {
+      this.selectedLocationTypes.push(location);
+    }
+    this.generateLocationMultiLineChart();
+  }
+
+  onSearchLocation(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchLocationTerm = target.value.toLowerCase();
+    this.filteredLocationTypes = this.allLocationTypes.filter(location =>
+      location.toLowerCase().includes(this.searchLocationTerm)
+    );
+  }
+
+  generateLocationMultiLineChart(): void {
+    const map: { [location: string]: { [month: string]: number } } = {};
+    const uniqueCombinations: { [location: string]: { [month: string]: Set<string> } } = {};
+    
+    this.selectedLocationTypes.forEach(l => {
+      map[l] = {};
+      uniqueCombinations[l] = {};
+    });
+  
+    // Apply date filtering to multi-line chart as well
+    const startDateObj = this.startDate ? new Date(this.startDate) : null;
+    const endDateObj = this.endDate ? new Date(this.endDate) : null;
+  
+    this.toolsRaw.forEach(t => {
+      if (t.error_name === 'Unknown') return;
+      
+      const location = this.extractErrorLocation(t.error_description);
+      if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
+      
+      if (!this.selectedLocationTypes.includes(location)) return;
+      
+      // Apply date filtering
+      const toolDate = new Date(t.state_in_date);
+      if (startDateObj && toolDate < startDateObj) return;
+      if (endDateObj && toolDate > endDateObj) return;
+      
+      const monthKey = this.getLocalMonthKey(t.state_in_date);
+      
+      if (!uniqueCombinations[location][monthKey]) {
+        uniqueCombinations[location][monthKey] = new Set<string>();
+      }
+      
+      const uniqueKey = `${t.state_in_date}_${location}`;
+      if (!uniqueCombinations[location][monthKey].has(uniqueKey)) {
+        uniqueCombinations[location][monthKey].add(uniqueKey);
+        map[location][monthKey] = (map[location][monthKey] || 0) + 1;
+      }
+    });
+  
+    // Collect all unique months from the entire dataset to ensure complete x-axis
+    const allMonths = new Set<string>();
+    
+    // Add all months from the entire dataset (not just selected locations)
+    this.toolsRaw.forEach(t => {
+      if (t.state_in_date) {
+        allMonths.add(this.getLocalMonthKey(t.state_in_date));
+      }
+    });
+    
+    // Also add months from selected locations (in case they're not in the main dataset)
+    Object.values(map).forEach(monthMap => {
+      Object.keys(monthMap).forEach(month => allMonths.add(month));
+    });
+    
+    const sortedMonths = Array.from(allMonths).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  
+    this.errorLocationTrendMultiLineData = Object.entries(map).map(([location, monthMap]) => ({
+      name: location,
+      series: sortedMonths.map(month => ({
+        name: month,
+        value: monthMap[month] || 0
+      }))
+    }));
+
+    // Update the applied filter notification
+    if (this.selectedLocationTypes.length === 0) {
+      this.appliedLocationFilter = 'No locations selected';
+    } else if (this.selectedLocationTypes.length === 1) {
+      this.appliedLocationFilter = `Showing: ${this.selectedLocationTypes[0]}`;
+    } else if (this.selectedLocationTypes.length <= 3) {
+      this.appliedLocationFilter = `Showing: ${this.selectedLocationTypes.join(', ')}`;
+    } else {
+      this.appliedLocationFilter = `Showing: ${this.selectedLocationTypes.length} locations`;
+    }
+  }
+
+  clearAllLocations(): void {
+    this.selectedLocationTypes = [];
+    this.generateLocationMultiLineChart();
+  }
+  
+  selectTopLocations(): void {
+    const locationCounts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
+    this.toolsRaw.forEach(t => {
+      if (t.error_name && t.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(t.error_description);
+        if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
+        
+        const uniqueKey = `${t.state_in_date}_${location}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          locationCounts[location] = (locationCounts[location] || 0) + 1;
+        }
+      }
+    });
+  
+    this.selectedLocationTypes = Object.entries(locationCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5) // Select top 5 locations
+      .map(([name]) => name);
+  
+    this.generateLocationMultiLineChart();
   }
 }
