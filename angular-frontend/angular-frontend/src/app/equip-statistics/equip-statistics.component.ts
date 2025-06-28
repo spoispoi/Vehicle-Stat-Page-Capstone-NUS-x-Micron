@@ -70,12 +70,17 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   equipEntries: Entry[] = [];
   isBrowser: boolean;
   errorFrequencyData: ErrorFrequency[] = [];
+  errorFrequencyWorkWeekData: ErrorFrequency[] = [];
   errorNotesData: ErrorNote[] = [];
   entries: Entry[] = [];
   filteredEntries: Entry[] = [];
   completeEntries: Entry[] = []; // Complete dataset without date filters for Most Recent Activity card
   legendPosition: LegendPosition = LegendPosition.Right;
   lineChartData: {
+    name: string;
+    series: { name: string; value: number }[];
+  }[] = [];
+  lineChartWorkWeekData: {
     name: string;
     series: { name: string; value: number }[];
   }[] = [];
@@ -407,6 +412,7 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     // Initialize default values
     this.errorFrequencyData = [];
     this.lineChartData = [];
+    this.lineChartWorkWeekData = [];
     this.errorNotesData = [];
     this.heatmapData = [];
 
@@ -496,6 +502,201 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       errorFrequencyData: this.errorFrequencyData,
       lineChartData: this.lineChartData,
       errorNotesData: this.errorNotesData
+    });
+
+    // Also transform data for WorkWeek charts
+    this.transformWorkWeekData(data);
+  }
+
+  // WorkWeek calculation methods
+  private getWorkWeekKey(dateString: string): string {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    
+    // Calculate workweek based on the rules:
+    // WW01 starts at January 3, 2025 to January 9, 2025
+    // WW02 starts at January 10, 2025 to January 16, 2025
+    // And so on...
+    
+    // Create a reference date for January 3rd of the year
+    const jan3rd = new Date(year, 0, 3); // January 3rd (month is 0-indexed)
+    
+    // Calculate days difference from January 3rd
+    const timeDiff = date.getTime() - jan3rd.getTime();
+    const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+    
+    // If the date is before January 3rd, it belongs to the previous year's workweeks
+    if (daysDiff < 0) {
+      // For dates before Jan 3rd, we need to handle year transition
+      const prevYearJan3rd = new Date(year - 1, 0, 3);
+      const prevYearTimeDiff = date.getTime() - prevYearJan3rd.getTime();
+      const prevYearDaysDiff = Math.floor(prevYearTimeDiff / (1000 * 3600 * 24));
+      const workWeekNumber = Math.floor(prevYearDaysDiff / 7) + 1;
+      const adjustedWorkWeek = ((workWeekNumber - 1) % 52) + 1;
+      // Add year prefix to differentiate from current year workweeks
+      return `${year-1}-WW${adjustedWorkWeek.toString().padStart(2, '0')}`;
+    }
+    
+    // Calculate workweek number (each workweek is 7 days starting from Jan 3rd)
+    const workWeekNumber = Math.floor(daysDiff / 7) + 1;
+    
+    // Ensure workweek is between 1 and 52
+    const adjustedWorkWeek = ((workWeekNumber - 1) % 52) + 1;
+    
+    // Add year prefix to differentiate between years
+    return `${year}-WW${adjustedWorkWeek.toString().padStart(2, '0')}`;
+  }
+
+  private compareWorkWeeks(ww1: string, ww2: string): number {
+    // Handle year-prefixed workweek format (e.g., "2024-WW27", "2025-WW01")
+    const ww1Match = ww1.match(/(\d{4})-WW(\d{2})/);
+    const ww2Match = ww2.match(/(\d{4})-WW(\d{2})/);
+    
+    if (ww1Match && ww2Match) {
+      const year1 = parseInt(ww1Match[1]);
+      const year2 = parseInt(ww2Match[1]);
+      const ww1Num = parseInt(ww1Match[2]);
+      const ww2Num = parseInt(ww2Match[2]);
+      
+      // First compare by year, then by workweek number
+      if (year1 !== year2) {
+        return year1 - year2;
+      }
+      return ww1Num - ww2Num;
+    }
+    
+    // Fallback for old format (just "WW01", "WW02", etc.)
+    const ww1Num = parseInt(ww1.replace('WW', ''));
+    const ww2Num = parseInt(ww2.replace('WW', ''));
+    return ww1Num - ww2Num;
+  }
+
+  private generateWorkWeekRangeFromDateFilters(): string[] {
+    const workWeekRange: string[] = [];
+    
+    // If no date filters, use all workweeks from complete data
+    if (!this.startDate && !this.endDate) {
+      const allWorkWeeks = new Set<string>();
+      this.completeEntries.forEach(entry => {
+        if (entry.state_in_date) {
+          allWorkWeeks.add(this.getWorkWeekKey(entry.state_in_date));
+        }
+      });
+      return Array.from(allWorkWeeks).sort((a, b) => this.compareWorkWeeks(a, b));
+    }
+    
+    // Determine start and end dates for workweek range
+    let startDate: Date;
+    let endDate: Date;
+    
+    if (this.startDate && this.endDate) {
+      startDate = new Date(this.startDate);
+      endDate = new Date(this.endDate);
+    } else if (this.startDate) {
+      startDate = new Date(this.startDate);
+      endDate = new Date(); // Today
+    } else if (this.endDate) {
+      startDate = new Date('2020-01-01'); // Default start date
+      endDate = new Date(this.endDate);
+    } else {
+      return [];
+    }
+    
+    // Generate all workweeks in the date range
+    const currentDate = new Date(startDate);
+    const endDateTime = endDate.getTime();
+    
+    while (currentDate.getTime() <= endDateTime) {
+      const workWeekKey = this.getWorkWeekKey(currentDate.toISOString().split('T')[0]);
+      if (!workWeekRange.includes(workWeekKey)) {
+        workWeekRange.push(workWeekKey);
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Sort workweeks chronologically
+    return workWeekRange.sort((a, b) => this.compareWorkWeeks(a, b));
+  }
+
+  private transformWorkWeekData(data: any) {
+    console.log('Transforming WorkWeek data:', data);
+    console.log('Date filters applied:', { startDate: this.startDate, endDate: this.endDate });
+    
+    // Initialize WorkWeek data
+    this.errorFrequencyWorkWeekData = [];
+    this.lineChartWorkWeekData = [];
+
+    // Check if we have error frequency data
+    if (!data.error_frequency || data.error_frequency.length === 0) {
+      console.log('No error frequency data found for WorkWeek transformation');
+      return;
+    }
+
+    const errorFrequencyWorkWeekDict: { [key: string]: { [error: string]: number } } = {};
+    const workWeekTotals: { [key: string]: number } = {};
+
+    // Process each error frequency entry to collect all workweeks
+    for (const item of data.error_frequency) {
+      if (item.error_name === 'Unknown') continue;
+
+      // Apply date filtering if filters are set
+      if (this.startDate || this.endDate) {
+        const itemDate = new Date(item.date);
+        const startDateObj = this.startDate ? new Date(this.startDate) : null;
+        const endDateObj = this.endDate ? new Date(this.endDate) : null;
+        
+        if (startDateObj && itemDate < startDateObj) continue;
+        if (endDateObj && itemDate > endDateObj) continue;
+      }
+
+      const workWeekKey = this.getWorkWeekKey(item.date);
+      
+      if (!errorFrequencyWorkWeekDict[workWeekKey]) {
+        errorFrequencyWorkWeekDict[workWeekKey] = {};
+      }
+      if (!workWeekTotals[workWeekKey]) {
+        workWeekTotals[workWeekKey] = 0;
+      }
+      
+      if (!errorFrequencyWorkWeekDict[workWeekKey][item.error_name]) {
+        errorFrequencyWorkWeekDict[workWeekKey][item.error_name] = 0;
+      }
+
+      errorFrequencyWorkWeekDict[workWeekKey][item.error_name] += item.count;
+      workWeekTotals[workWeekKey] += item.count;
+    }
+
+    // Create consistent workweek range based on date filters
+    const workWeekRange = this.generateWorkWeekRangeFromDateFilters();
+
+    // Create WorkWeek error frequency data with consistent time series
+    this.errorFrequencyWorkWeekData = workWeekRange.map((workWeekKey) => ({
+      name: workWeekKey,
+      extra: { date: workWeekKey },
+      series: Object.entries(errorFrequencyWorkWeekDict[workWeekKey] || {}).map(
+        ([error, count]) => ({
+          name: error,
+          value: count,
+        })
+      ),
+    }));
+
+    // Create WorkWeek line chart data with consistent time series
+    this.lineChartWorkWeekData = [
+      {
+        name: 'Total Errors',
+        series: workWeekRange.map((workWeekKey) => ({
+          name: workWeekKey,
+          value: workWeekTotals[workWeekKey] || 0,
+        })),
+      },
+    ];
+
+    console.log('Transformed WorkWeek data with consistent time series:', {
+      errorFrequencyWorkWeekData: this.errorFrequencyWorkWeekData,
+      lineChartWorkWeekData: this.lineChartWorkWeekData
     });
   }
 
@@ -974,5 +1175,57 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     this.filteredEntries = this.sortEntries(this.entries.filter((e) => e.error_name !== 'Unknown'));
     this.processErrorLocations();
     this.processUnfilteredErrorLocations();
+  }
+
+  // WorkWeek chart event handlers
+  onWorkWeekTrendSelect(event: any): void {
+    const workWeek = event.name;
+    this.activeMonthFilter = null; // Clear month filter
+    this.selectedErrorName = `WorkWeek: ${workWeek}`;
+    this.activeErrorNameFilter = null;
+    this.filteredEntries = this.sortEntries(
+      this.entries.filter((entry) => {
+        const entryWorkWeek = this.getWorkWeekKey(entry.state_in_date);
+        return entryWorkWeek === workWeek && entry.error_name !== 'Unknown';
+      })
+    );
+    this.processErrorLocations();
+    this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => {
+      window.scrollBy({ top: -120, behavior: 'smooth' });
+    }, 100);
+  }
+
+  onWorkWeekSelect(event: any): void {
+    // A legend click event in ngx-charts often returns the series name as a string
+    if (typeof event === 'string') {
+      // This handles a legend click, filtering by the error name.
+      this.selectedErrorName = event;
+      this.activeErrorNameFilter = event;
+      this.activeMonthFilter = null;
+      this.filteredEntries = this.sortEntries(
+        this.entries.filter((entry) => entry.error_name === this.selectedErrorName && entry.error_name !== 'Unknown')
+      );
+      this.processErrorLocations();
+    } 
+    // A bar click event returns an object with details
+    else if (event.series) {
+      // This handles a bar click, filtering by the workweek.
+      const workWeek = event.series;
+      this.activeMonthFilter = null;
+      this.selectedErrorName = `WorkWeek: ${workWeek}`;
+      this.activeErrorNameFilter = null;
+      this.filteredEntries = this.sortEntries(
+        this.entries.filter((entry) => {
+          const entryWorkWeek = this.getWorkWeekKey(entry.state_in_date);
+          return entryWorkWeek === workWeek && entry.error_name !== 'Unknown';
+        })
+      );
+      this.processErrorLocations();
+    }
+    this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => {
+      window.scrollBy({ top: -120, behavior: 'smooth' });
+    }, 100);
   }
 }

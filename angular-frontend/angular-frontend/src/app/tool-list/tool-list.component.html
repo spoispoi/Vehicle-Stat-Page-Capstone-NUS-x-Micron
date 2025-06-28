@@ -197,6 +197,57 @@
   </div>
 </div>
 
+<!-- Section: WorkWeek Error Trend -->
+<div class="flex-row-scroll" *ngIf="!isLoading && !isDateFilterLoading">
+  <div class="scroll-chart">
+    <h3 class="section-title">Error Trend by WorkWeek</h3>
+    <div class="scroll-container">
+      <ngx-charts-line-chart
+        [view]="[1200, 500]"
+        [scheme]="colorSchemeSingle"
+        [results]="[{ name: 'Errors', series: errorTrendWorkWeekData }]"
+        [xAxis]="true"
+        [yAxis]="true"
+        [xAxisLabel]="'WorkWeek'"
+        [yAxisLabel]="'Error Count'"
+        [legend]="false"
+        [autoScale]="true">
+      </ngx-charts-line-chart>
+    </div>
+  </div>
+  <div class="sidebar-list">
+    <h3 class="section-title">Top 5 WorkWeeks</h3>
+    <div class="accordion">
+      <div class="accordion-item" *ngFor="let item of top5WorkWeeks; let i = index">
+        <div class="accordion-header" (click)="toggleWorkWeek(i)">
+          <div class="error-name">{{ item.name }}</div>
+          <div class="d-flex align-items-center">
+            <span class="badge error-count-badge">{{ item.value }}</span>
+            <span class="chevron-icon" [class.rotate]="expandedWorkWeekIndex === i">▼</span>
+          </div>
+        </div>
+        <div class="accordion-content" [@collapseAnimation]="expandedWorkWeekIndex === i ? 'expanded' : 'collapsed'">
+          <div *ngIf="workWeekRowLoading[item.name]" class="text-center my-2">
+            <div class="spinner-border text-warning spinner-border-sm" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <ul class="list-unstyled ms-2 vehicle-list"
+              *ngIf="!workWeekRowLoading[item.name] && (workWeekToErrorMapFiltered[item.name]?.length || 0) > 0; else noWorkWeekErrors">
+            <li *ngFor="let sub of workWeekToErrorMapFiltered[item.name]">
+              <span class="vehicle-name">▸ {{ sub.name }}</span>
+              <span class="badge vehicle-count-badge">{{ sub.value }}</span>
+            </li>
+          </ul>
+          <ng-template #noWorkWeekErrors>
+            <p class="text-muted small ms-2">No matching data found.</p>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 
  <!-- Section: Multi-line Error Trends -->
@@ -235,6 +286,53 @@
                    [checked]="selectedErrorTypes.includes(error)"
                    (change)="onErrorTypeToggle(error)">
             <label class="form-check-label" [for]="'error-' + i">{{ error }}</label>
+          </div>
+        </div>
+        <div class="dropdown-actions">
+          <button class="btn btn-action btn-danger" (click)="clearAllErrors()">Unselect All</button>
+          <button class="btn btn-action btn-success" (click)="selectTopErrors()">Select Top 5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section: WorkWeek Multi-line Error Trends -->
+<div class="flex-row-scroll" *ngIf="!isLoading && !isDateFilterLoading">
+  <div class="scroll-chart">
+    <h3 class="section-title">Error Trends by Error Type (WorkWeek)</h3>
+    <div class="scroll-container">
+      <ngx-charts-line-chart
+        [view]="[1200, 500]"
+        [scheme]="colorScheme"
+        [results]="errorTrendWorkWeekMultiLineData"
+        [xAxis]="true"
+        [yAxis]="true"
+        [legend]="true"
+        [showGridLines]="true"
+        [roundDomains]="true"
+        [xAxisLabel]="'WorkWeek'"
+        [yAxisLabel]="'Error Count'">
+      </ngx-charts-line-chart>
+    </div>
+  </div>
+  <div class="sidebar-list">
+    <h3 class="section-title">Filter Errors for WorkWeek Error Trend</h3>
+    <div class="custom-dropdown">
+      <button class="dropdown-toggle-button" (click)="showWorkWeekDropdown = !showWorkWeekDropdown">
+        <span>Select Errors</span>
+        <span class="chevron-icon" [class.rotate]="showWorkWeekDropdown">▼</span>
+      </button>
+      <div class="dropdown-content" [@collapseAnimation]="showWorkWeekDropdown ? 'expanded' : 'collapsed'">
+        <div class="dropdown-search">
+          <input type="text" class="form-control" placeholder="Search Errors" (input)="onSearchError($event)" />
+        </div>
+        <div class="error-list">
+          <div class="form-check" *ngFor="let error of filteredErrorTypes; let i = index">
+            <input class="form-check-input" type="checkbox" [id]="'workweek-error-' + i"
+                   [checked]="selectedErrorTypes.includes(error)"
+                   (change)="onErrorTypeToggle(error)">
+            <label class="form-check-label" [for]="'workweek-error-' + i">{{ error }}</label>
           </div>
         </div>
         <div class="dropdown-actions">
@@ -489,6 +587,57 @@
                    [checked]="selectedLocationTypes.includes(location)"
                    (change)="onLocationTypeToggle(location)">
             <label class="form-check-label" [for]="'location-' + i">{{ location }}</label>
+          </div>
+        </div>
+        <div class="dropdown-actions">
+          <button class="btn btn-action btn-danger" (click)="clearAllLocations()">Unselect All</button>
+          <button class="btn btn-action btn-success" (click)="selectTopLocations()">Select Top 5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section: WorkWeek Error Location Trends -->
+<div class="flex-row-scroll mt-5" *ngIf="!isLoading && !isDateFilterLoading">
+  <div class="scroll-chart">
+    <h3 class="section-title">Error Location Trends by WorkWeek</h3>
+    <!-- Filter Notification -->
+    <div class="filter-notification" *ngIf="appliedLocationFilter">
+      <span class="filter-badge">{{ appliedLocationFilter }}</span>
+    </div>
+    <div class="scroll-container">
+      <ngx-charts-line-chart
+        [view]="[1200, 500]"
+        [scheme]="colorScheme"
+        [results]="errorLocationTrendWorkWeekMultiLineData"
+        [xAxis]="true"
+        [yAxis]="true"
+        [legend]="true"
+        [showGridLines]="true"
+        [roundDomains]="true"
+        [xAxisLabel]="'WorkWeek'"
+        [yAxisLabel]="'Error Count'">
+      </ngx-charts-line-chart>
+    </div>
+  </div>
+  <div class="sidebar-list">
+    <h3 class="section-title">Filter Locations for WorkWeek Location Trend</h3>
+    <div class="custom-dropdown">
+      <button class="dropdown-toggle-button" (click)="showLocationWorkWeekDropdown = !showLocationWorkWeekDropdown">
+        <span>Select Locations</span>
+        <span class="chevron-icon" [class.rotate]="showLocationWorkWeekDropdown">▼</span>
+      </button>
+      <div class="dropdown-content" [@collapseAnimation]="showLocationWorkWeekDropdown ? 'expanded' : 'collapsed'">
+        <div class="dropdown-search">
+          <input type="text" class="form-control" placeholder="Search Locations" (input)="onSearchLocation($event)" />
+        </div>
+        <div class="error-list">
+          <div class="form-check" *ngFor="let location of filteredLocationTypes; let i = index">
+            <input class="form-check-input" type="checkbox" [id]="'workweek-location-' + i"
+                   [checked]="selectedLocationTypes.includes(location)"
+                   (change)="onLocationTypeToggle(location)">
+            <label class="form-check-label" [for]="'workweek-location-' + i">{{ location }}</label>
           </div>
         </div>
         <div class="dropdown-actions">
