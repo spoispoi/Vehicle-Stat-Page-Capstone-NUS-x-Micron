@@ -97,12 +97,20 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   mostCommonErrorLocation: string = 'N/A';
   mostCommonErrorLocationErrors: { name: string; count: number }[] = [];
 
+  // Unfiltered error location properties (for summary card)
+  unfilteredMostCommonErrorLocation: string = 'N/A';
+  unfilteredUniqueErrorLocations: number = 0;
+  unfilteredMostCommonErrorLocationErrors: { name: string; count: number }[] = [];
+
   // Date filter properties
   startDate: string = '';
   endDate: string = '';
   isLoading: boolean = false;
+  isDateFilterLoading: boolean = false;
 
   @ViewChild('entriesSection') entriesSection!: ElementRef;
+  @ViewChild('errorLocationSection') errorLocationSection!: ElementRef;
+  @ViewChild('dateFilter') dateFilter!: DateFilterComponent;
 
   colorScheme: Color = {
     name: 'techTransparent',
@@ -177,6 +185,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
         // Process error locations after all data is loaded
         this.processErrorLocations();
         this.isLoading = false;
+        // Stop the date filter loading state
+        if (this.dateFilter) {
+          this.dateFilter.stopLoading();
+        }
+        this.isDateFilterLoading = false;
       },
       error: (error) => {
         console.error('Error loading statistics:', error);
@@ -193,6 +206,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
         // Process error locations even on error
         this.processErrorLocations();
         this.isLoading = false;
+        // Stop the date filter loading state
+        if (this.dateFilter) {
+          this.dateFilter.stopLoading();
+        }
+        this.isDateFilterLoading = false;
       }
     });
   }
@@ -261,6 +279,13 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       next: (tools) => {
         console.log('Tool entries received:', tools);
         this.processToolEntries(tools);
+        this.applyDateFilters();
+        this.processErrorLocations();
+        this.processUnfilteredErrorLocations();
+        this.renderEquipEntries();
+        this.prepareErrorByEquipData();
+        this.fetchStatisticsGraph(this.equipId);
+        this.loadMostRecentEntry();
       },
       error: (error) => {
         console.error('Error loading tool entries:', error);
@@ -294,37 +319,44 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
   }
   
   private applyDateFilters(): void {
-    // Start with all entries (which are already date-filtered from the API)
-    let filtered = [...this.entries];
-    
-    // Filter out PM entries from the main entries table
-    this.filteredEntries = this.sortEntries(filtered.filter((e) => e.error_name !== 'Unknown'));
-    
-    // Apply error name filter if selected
-    if (this.selectedErrorName) {
-      this.filteredEntries = this.filteredEntries.filter(entry => 
-        entry.error_name === this.selectedErrorName
+    if (this.startDate || this.endDate) {
+      this.filteredEntries = this.sortEntries(
+        this.entries.filter((entry) => {
+          const entryDate = entry.state_in_date.split('T')[0];
+          const isAfterStart = !this.startDate || entryDate >= this.startDate;
+          const isBeforeEnd = !this.endDate || entryDate <= this.endDate;
+          return isAfterStart && isBeforeEnd && entry.error_name !== 'Unknown';
+        })
       );
+    } else {
+      this.filteredEntries = this.sortEntries(this.entries.filter((e) => e.error_name !== 'Unknown'));
     }
+    this.processErrorLocations();
+    this.processUnfilteredErrorLocations();
   }
   
   onDateRangeChange(dateRange: DateRange): void {
     console.log('Date range changed:', dateRange);
     this.startDate = dateRange.startDate;
     this.endDate = dateRange.endDate;
-    
-    // Reload statistics with date filters (affects statistics cards and charts)
+    this.isDateFilterLoading = true;
     this.loadStatistics();
-    // Note: loadCompleteEntries() is called within loadStatistics() and is not affected by date filters
   }
   
   onFilterCleared(): void {
+    console.log('Date filter cleared');
     this.startDate = '';
     this.endDate = '';
-    
-    // Reload statistics without date filters
+    this.isDateFilterLoading = true;
     this.loadStatistics();
-    // Note: loadCompleteEntries() is called within loadStatistics() and will reload complete data
+  }
+
+  onDateFilterLoadingStarted(): void {
+    this.isDateFilterLoading = true;
+  }
+
+  onDateFilterLoadingEnded(): void {
+    this.isDateFilterLoading = false;
   }
 
   sortEntries(entries: Entry[]): Entry[] {
@@ -504,7 +536,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       this.entries.filter((entry) => entry.error_name === event.name && entry.error_name !== 'Unknown')
     );
     this.processErrorLocations(); // Recalculate error location data for this error name
-    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Add a small delay and scroll up a bit more to show the filter alert
+    setTimeout(() => {
+      window.scrollBy({ top: -120, behavior: 'smooth' });
+    }, 100);
   }
 
   onMonthSelect(event: any): void {
@@ -540,7 +576,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       );
       this.processErrorLocations();
     }
-    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Add a small delay and scroll up a bit more to show the filter alert
+    setTimeout(() => {
+      window.scrollBy({ top: -120, behavior: 'smooth' });
+    }, 100);
   }
 
   onTrendSelect(event: any): void {
@@ -559,7 +599,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
       })
     );
     this.processErrorLocations();
-    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Add a small delay and scroll up a bit more to show the filter alert
+    setTimeout(() => {
+      window.scrollBy({ top: -120, behavior: 'smooth' });
+    }, 100);
   }
 
   onErrorLocationSelect(event: any): void {
@@ -572,7 +616,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
           return location === event.name && entry.error_name !== 'Unknown';
         })
       );
-      this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+      this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Add a small delay and scroll up a bit more to show the filter alert
+      setTimeout(() => {
+        window.scrollBy({ top: -120, behavior: 'smooth' });
+      }, 100);
     }
   }
 
@@ -585,7 +633,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
           entry.error_location === event.series && entry.error_name !== 'Unknown'
         )
       );
-      this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+      this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Add a small delay and scroll up a bit more to show the filter alert
+      setTimeout(() => {
+        window.scrollBy({ top: -120, behavior: 'smooth' });
+      }, 100);
     }
   }
 
@@ -599,7 +651,11 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
                entry.error_name !== 'Unknown';
       })
     );
-    this.entriesSection?.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    this.errorLocationSection?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Add a small delay and scroll up a bit more to show the filter alert
+    setTimeout(() => {
+      window.scrollBy({ top: -120, behavior: 'smooth' });
+    }, 100);
   }
 
   formatXAxisTick = (val: string): string => {
@@ -823,6 +879,61 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     });
   }
 
+  processUnfilteredErrorLocations(): void {
+    // Calculate unfiltered error location statistics for the summary card
+    const locationCounts: { [location: string]: number } = {};
+    const locationErrorDetails: { [location: string]: { [errorName: string]: number } } = {};
+
+    // Use all entries without any filters
+    this.entries.forEach(entry => {
+      if (entry.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(entry.error_description);
+        if (location.startsWith('8')) return; // Exclude all locations starting with '8'
+        entry.error_location = location;
+        // Count locations
+        locationCounts[location] = (locationCounts[location] || 0) + 1;
+        // Count by error name for each location
+        if (!locationErrorDetails[location]) {
+          locationErrorDetails[location] = {};
+        }
+        locationErrorDetails[location][entry.error_name] = (locationErrorDetails[location][entry.error_name] || 0) + 1;
+      }
+    });
+
+    // Calculate unfiltered statistics
+    const unfilteredLocationData = Object.entries(locationCounts)
+      .filter(([location]) => location !== 'Unknown' && !location.startsWith('8'))
+      .map(([location, count]) => ({
+        name: location,
+        value: count
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    this.unfilteredUniqueErrorLocations = unfilteredLocationData.length;
+    this.unfilteredMostCommonErrorLocation = unfilteredLocationData.length > 0 ? unfilteredLocationData[0].name : 'N/A';
+
+    // Find all error names and counts for the unfiltered most common error location
+    if (this.unfilteredMostCommonErrorLocation !== 'N/A') {
+      const errorMap: { [name: string]: number } = {};
+      this.entries.forEach(entry => {
+        if (entry.error_location === this.unfilteredMostCommonErrorLocation && entry.error_name !== 'Unknown') {
+          errorMap[entry.error_name] = (errorMap[entry.error_name] || 0) + 1;
+        }
+      });
+      this.unfilteredMostCommonErrorLocationErrors = Object.entries(errorMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+    } else {
+      this.unfilteredMostCommonErrorLocationErrors = [];
+    }
+
+    console.log('Unfiltered error locations processed:', {
+      uniqueLocations: this.unfilteredUniqueErrorLocations,
+      mostCommon: this.unfilteredMostCommonErrorLocation,
+      errors: this.unfilteredMostCommonErrorLocationErrors
+    });
+  }
+
   // Test method for error location extraction
   testErrorLocationExtraction(): void {
     const testCases = [
@@ -862,5 +973,6 @@ export class EquipStatisticsComponent implements OnInit, AfterViewInit {
     this.activeMonthFilter = null;
     this.filteredEntries = this.sortEntries(this.entries.filter((e) => e.error_name !== 'Unknown'));
     this.processErrorLocations();
+    this.processUnfilteredErrorLocations();
   }
 }

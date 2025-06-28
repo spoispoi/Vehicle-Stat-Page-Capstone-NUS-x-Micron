@@ -16,6 +16,53 @@ body, html {
   padding: 20px;
   background-color: #161b22;
   color: #e0e0e0;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Loading state transitions */
+.container-fluid {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.container-fluid.loading {
+  opacity: 0.7;
+}
+
+/* Smooth transitions for cards */
+.stat-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+/* Loading spinner animation */
+.spinner-border {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fade in animation for content */
+.chart-card,
+.entries-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 h1 {
@@ -306,8 +353,53 @@ ngx-charts-advanced-pie-chart text:hover {
   transform: scale(1.1); /* Just scale, no translate */
 }
 
-/* Factory Floor Grid Background */
+/* Factory Floor Grid Background - Always visible */
 .factory-floor {
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Ensure factory floor background is always visible regardless of loading state */
+.factory-floor::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-attachment: fixed;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Loading state should only affect content opacity, not background */
+.container-fluid.loading::before {
+  opacity: 1 !important;
+}
+
+/* Ensure the factory floor background is preserved during loading */
+.factory-floor.loading {
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-attachment: fixed;
+}
+
+.factory-floor.loading::before {
+  opacity: 1 !important;
   background-color: #0d1117;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),

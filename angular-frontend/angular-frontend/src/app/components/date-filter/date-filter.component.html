@@ -1,8 +1,15 @@
-
-<div class="date-filter-container">
+<div class="date-filter-container" [class.loading]="isInternalLoading">
   <div class="card filter-card">
     <div class="card-body">
       <h6 class="filter-title">📅 Date Filter</h6>
+      
+      <!-- Loading Indicator -->
+      <div *ngIf="isInternalLoading" class="alert alert-info d-flex align-items-center">
+        <div class="spinner-border spinner-border-sm me-2" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <span>Updating data...</span>
+      </div>
       
       <!-- Status Alert - Always show -->
       <div class="alert" [ngClass]="{'alert-info': isFilterApplied, 'alert-success': !isFilterApplied}">
@@ -19,30 +26,35 @@
         <button 
           class="btn btn-sm" 
           [ngClass]="{'btn-primary': activeQuickRange === 'all', 'btn-outline-primary': activeQuickRange !== 'all'}"
+          [disabled]="isInternalLoading"
           (click)="setQuickRange('all')">
           All Time
         </button>
         <button 
           class="btn btn-sm" 
           [ngClass]="{'btn-primary': activeQuickRange === 'week', 'btn-outline-primary': activeQuickRange !== 'week'}"
+          [disabled]="isInternalLoading"
           (click)="setQuickRange('week')">
           Last Week
         </button>
         <button 
           class="btn btn-sm" 
           [ngClass]="{'btn-primary': activeQuickRange === 'month', 'btn-outline-primary': activeQuickRange !== 'month'}"
+          [disabled]="isInternalLoading"
           (click)="setQuickRange('month')">
           Last Month
         </button>
         <button 
           class="btn btn-sm" 
           [ngClass]="{'btn-primary': activeQuickRange === 'quarter', 'btn-outline-primary': activeQuickRange !== 'quarter'}"
+          [disabled]="isInternalLoading"
           (click)="setQuickRange('quarter')">
           3 Months
         </button>
         <button 
           class="btn btn-sm" 
           [ngClass]="{'btn-primary': activeQuickRange === 'year', 'btn-outline-primary': activeQuickRange !== 'year'}"
+          [disabled]="isInternalLoading"
           (click)="setQuickRange('year')">
           1 Year
         </button>
@@ -52,15 +64,15 @@
       <div class="custom-controls-row">
         <div class="date-input-group">
           <label for="startDate" class="form-label">Start Date</label>
-          <input type="date" id="startDate" class="form-control form-control-sm" [value]="startDate" (change)="onStartDateChange($event)">
+          <input type="date" id="startDate" class="form-control form-control-sm" [value]="startDate" [disabled]="isInternalLoading" (change)="onStartDateChange($event)">
         </div>
         <div class="date-input-group">
           <label for="endDate" class="form-label">End Date</label>
-          <input type="date" id="endDate" class="form-control form-control-sm" [value]="endDate" (change)="onEndDateChange($event)">
+          <input type="date" id="endDate" class="form-control form-control-sm" [value]="endDate" [disabled]="isInternalLoading" (change)="onEndDateChange($event)">
         </div>
         <div class="action-buttons">
-          <button class="btn btn-primary btn-sm" (click)="applyFilter()" [disabled]="!hasValidDates()">Apply</button>
-          <button class="btn btn-outline-secondary btn-sm" (click)="clearFilter()">Clear</button>
+          <button class="btn btn-primary btn-sm" (click)="applyFilter()" [disabled]="!hasValidDates() || isInternalLoading">Apply</button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="clearFilter()" [disabled]="isInternalLoading">Clear</button>
         </div>
       </div>
 

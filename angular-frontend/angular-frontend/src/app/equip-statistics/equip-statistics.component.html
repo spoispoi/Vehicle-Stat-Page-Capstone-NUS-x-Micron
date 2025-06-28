@@ -1,6 +1,6 @@
 <div #topOfPage></div>
 
-<div class="container-fluid factory-floor py-4 px-3"> 
+<div class="container-fluid factory-floor py-4 px-3" [class.loading]="isDateFilterLoading"> 
   <!-- Top Bar: Header Info and Recent Activity -->
   <div class="d-flex justify-content-between align-items-start mb-4">
     <!-- Left Side: Back Button & Title -->
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Right Side: Most Recent Activity Card -->
-    <div class="col-lg-5" *ngIf="!isLoading">
+    <div class="col-lg-5" *ngIf="!isLoading && !isDateFilterLoading">
       <div class="card recent-activity-notice h-100">
         <div class="card-body">
           <div class="activity-header">
@@ -50,17 +50,20 @@
   <div class="row g-4 mb-4" *ngIf="!isLoading">
     <div class="col-lg-7">
       <app-date-filter
+        #dateFilter
         [startDate]="startDate"
         [endDate]="endDate"
         [earliestDate]="statistics?.earliest_error_date || ''"
         (dateRangeChange)="onDateRangeChange($event)"
-        (filterCleared)="onFilterCleared()">
+        (filterCleared)="onFilterCleared()"
+        (loadingStarted)="onDateFilterLoadingStarted()"
+        (loadingEnded)="onDateFilterLoadingEnded()">
       </app-date-filter>
     </div>
   </div>
 
   <!-- Overview Cards -->
-  <div class="row g-4 mb-4">
+  <div class="row g-4 mb-4" *ngIf="!isLoading && !isDateFilterLoading">
     <div class="col-lg-3 col-md-6 col-12">
       <!-- Days Since Last Error Card -->
       <div class="card stat-card">
@@ -98,32 +101,24 @@
       <div class="card stat-card">
         <div class="card-body text-center">
           <h6 class="stat-label">📍 Most Common Error Location</h6>
-          <div class="stat-value stat-value-longtext">{{ mostCommonErrorLocation }}</div>
-          <div class="stat-sub-info mb-2">{{ uniqueErrorLocations }} unique locations</div>
-          <div *ngIf="mostCommonErrorLocationErrors.length > 0" class="mt-2">
+          <div class="stat-value stat-value-longtext">{{ unfilteredMostCommonErrorLocation }}</div>
+          <div *ngIf="unfilteredMostCommonErrorLocationErrors.length > 0" class="mt-2">
             <div class="fw-bold small text-muted mb-1">Corresponding Errors:</div>
             <ul class="list-unstyled mb-0">
-              <li *ngFor="let err of mostCommonErrorLocationErrors">
+              <li *ngFor="let err of unfilteredMostCommonErrorLocationErrors">
                 <span class="text-accent">{{ err.name }}</span>
                 <span class="text-muted">({{ err.count }})</span>
               </li>
             </ul>
           </div>
+          <div class="stat-sub-info mb-2">{{ unfilteredUniqueErrorLocations }} unique locations</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Loading Indicator -->
-  <div *ngIf="isLoading" class="text-center my-4">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-    <p class="mt-2 text-muted">Loading statistics...</p>
-  </div>
-
   <!-- Charts and Data Tables -->
-  <div *ngIf="!isLoading">
+  <div *ngIf="!isLoading && !isDateFilterLoading">
     <!-- Charts Section -->
     <div class="row g-4 mt-4 justify-content-center">
       <div class="col-12">
@@ -199,22 +194,31 @@
     </div>
 
     <!-- Error Location Charts and Details (moved above Error Entries) -->
-    <div class="row g-4 mt-4" *ngIf="errorLocationData.length > 0">
+    <div class="row g-4 mt-4" *ngIf="filteredEntries.length > 0" id="error-location-section" #errorLocationSection>
       <div class="col-lg-6">
         <div class="card chart-card chart-card-equal-height">
           <div class="card-body">
             <h5 class="chart-title">📍 Error Locations Distribution</h5>
-            <ngx-charts-pie-chart
-              [results]="errorLocationData"
-              [gradient]="true"
-              [scheme]="colorScheme"
-              [legend]="true"
-              [legendPosition]="legendPosition"
-              [labels]="true"
-              [doughnut]="false"
-              [arcWidth]="0.6"
-              (select)="onErrorLocationSelect($event)">
-            </ngx-charts-pie-chart>
+            <div *ngIf="errorLocationData.length > 0">
+              <ngx-charts-pie-chart
+                [results]="errorLocationData"
+                [gradient]="true"
+                [scheme]="colorScheme"
+                [legend]="true"
+                [legendPosition]="legendPosition"
+                [labels]="true"
+                [doughnut]="false"
+                [arcWidth]="0.6"
+                (select)="onErrorLocationSelect($event)">
+              </ngx-charts-pie-chart>
+            </div>
+            <div *ngIf="errorLocationData.length === 0" class="text-center py-4">
+              <div class="text-muted">
+                <i class="fas fa-info-circle mb-2"></i>
+                <p class="mb-0">No location data available for the selected filter.</p>
+                <small>This may occur when error locations cannot be extracted from the error descriptions.</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -223,7 +227,7 @@
           <div class="card-body">
             <h5 class="chart-title">📍 Error Location Details</h5>
             <p class="text-muted mb-3">Detailed breakdown of errors by location</p>
-            <div class="table-responsive">
+            <div *ngIf="errorLocationDetails.length > 0" class="table-responsive">
               <table class="table table-hover align-middle">
                 <thead class="table-header">
                   <tr>
@@ -263,6 +267,13 @@
                 <button *ngIf="errorLocationDetails.length > 5" class="see-more-btn" (click)="showAllErrorLocationDetails = !showAllErrorLocationDetails">
                   {{ showAllErrorLocationDetails ? 'See Less' : 'See More' }}
                 </button>
+              </div>
+            </div>
+            <div *ngIf="errorLocationDetails.length === 0" class="text-center py-4">
+              <div class="text-muted">
+                <i class="fas fa-info-circle mb-2"></i>
+                <p class="mb-0">No location details available for the selected filter.</p>
+                <small>This may occur when error locations cannot be extracted from the error descriptions.</small>
               </div>
             </div>
           </div>

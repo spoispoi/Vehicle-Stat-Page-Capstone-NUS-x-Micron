@@ -63,6 +63,7 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   endDate: string = '';
   earliestDate: string = '';
   isLoading: boolean = false;
+  isDateFilterLoading: boolean = false;
 
   // Top 10 equipment cache
   top10EquipIds: string[] = [];
@@ -132,6 +133,7 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   showAllLeaderboard: boolean = false;
 
   @ViewChild('collapsedTable') collapsedTableRef!: ElementRef<HTMLTableElement>;
+  @ViewChild('dateFilter') dateFilter!: DateFilterComponent;
   collapsedTableHeight: number = 0;
 
   // Error location properties for leaderboard
@@ -199,13 +201,28 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     
     this.toolService.getTools(this.startDate, this.endDate).subscribe({
       next: (tools) => {
+        console.log('Tools data received:', tools);
+        this.tools = tools;
         this.toolsRaw = tools;
         this.processToolsData(tools);
         this.isLoading = false;
+        // Stop the date filter loading state
+        if (this.dateFilter) {
+          this.dateFilter.stopLoading();
+        }
+        this.isDateFilterLoading = false;
       },
       error: (error) => {
         console.error('Error loading tools:', error);
+        this.tools = [];
+        this.toolsRaw = [];
+        this.processToolsData([]);
         this.isLoading = false;
+        // Stop the date filter loading state
+        if (this.dateFilter) {
+          this.dateFilter.stopLoading();
+        }
+        this.isDateFilterLoading = false;
       }
     });
   }
@@ -332,17 +349,27 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   }
 
   onDateRangeChange(dateRange: DateRange): void {
+    console.log('Date range changed:', dateRange);
     this.startDate = dateRange.startDate;
     this.endDate = dateRange.endDate;
+    this.isDateFilterLoading = true;
     this.loadTools();
-    // Note: loadCompleteData() is not called here, so the unfiltered charts remain unchanged
   }
 
   onFilterCleared(): void {
+    console.log('Date filter cleared');
     this.startDate = '';
     this.endDate = '';
+    this.isDateFilterLoading = true;
     this.loadTools();
-    // Note: loadCompleteData() is not called here, so the unfiltered charts remain unchanged
+  }
+
+  onDateFilterLoadingStarted(): void {
+    this.isDateFilterLoading = true;
+  }
+
+  onDateFilterLoadingEnded(): void {
+    this.isDateFilterLoading = false;
   }
 
   private processToolsData(tools: any[]): void {

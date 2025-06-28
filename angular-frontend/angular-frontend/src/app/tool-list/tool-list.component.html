@@ -1,5 +1,6 @@
 <div class="container-fluid factory-floor px-5 mt-4" 
-     [class.dark-mode]="isDarkMode">
+     [class.dark-mode]="isDarkMode"
+     [class.loading]="isDateFilterLoading">
      
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="header-title flex-grow-1" style="color: #f0f6fc;">Vehicle Statistics Page</h1>
@@ -9,16 +10,19 @@
     <!-- Date Filter -->
     <div class="date-filter-container">
       <app-date-filter
+        #dateFilter
         [startDate]="startDate"
         [endDate]="endDate"
         [earliestDate]="earliestDate"
         (dateRangeChange)="onDateRangeChange($event)"
-        (filterCleared)="onFilterCleared()">
+        (filterCleared)="onFilterCleared()"
+        (loadingStarted)="onDateFilterLoadingStarted()"
+        (loadingEnded)="onDateFilterLoadingEnded()">
       </app-date-filter>
     </div>
 
     <!-- KPI Cards Section -->
-    <div class="kpi-container" *ngIf="!isLoading">
+    <div class="kpi-container" *ngIf="!isLoading && !isDateFilterLoading">
       <div class="kpi-card">
         <div class="kpi-label">Top Occurring Error</div>
         <div class="kpi-value">{{ topOccurringErrorName }}</div>
@@ -47,15 +51,15 @@
   </div>
 
   <!-- Loading Indicator -->
-  <div *ngIf="isLoading" class="text-center my-4">
+  <div *ngIf="isLoading || isDateFilterLoading" class="text-center my-4">
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Loading...</span>
     </div>
-    <p class="mt-2 text-muted">Loading data...</p>
+    <p class="mt-2 text-muted">{{ isDateFilterLoading ? 'Updating data...' : 'Loading data...' }}</p>
   </div>
    
   <!-- Section: Top 10 Errors -->
-  <div class="flex-row-scroll mt-5" *ngIf="!isLoading">
+  <div class="flex-row-scroll mt-5" *ngIf="!isLoading && !isDateFilterLoading">
     <div class="scroll-chart">
       <div class="hardware-label">Hardware</div>
       <h3 class="section-title">Top 10 Errors</h3>
@@ -98,7 +102,7 @@
 
 
 <!-- Section: Top Equipment with Scrollable Chart -->
-<div class="flex-row-scroll" *ngIf="!isLoading">
+<div class="flex-row-scroll" *ngIf="!isLoading && !isDateFilterLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Top Equipment by Error Count</h3>
     <div class="chart-summary-flex">
@@ -143,7 +147,7 @@
 
 
 <!-- Section: Monthly Error Trend -->
-<div class="flex-row-scroll" *ngIf="!isLoading">
+<div class="flex-row-scroll" *ngIf="!isLoading && !isDateFilterLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Error Trend by Month</h3>
     <div class="scroll-container">
@@ -196,7 +200,7 @@
 
 
  <!-- Section: Multi-line Error Trends -->
-<div class="flex-row-scroll" *ngIf="!isLoading">
+<div class="flex-row-scroll" *ngIf="!isLoading && !isDateFilterLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Error Trends by Error Type</h3>
     <div class="scroll-container">
@@ -245,13 +249,13 @@
 
 
     <!-- Search Bar -->
-    <div class="input-group mb-4 justify-content-center" *ngIf="!isLoading">
+    <div class="input-group mb-4 justify-content-center" *ngIf="!isLoading && !isDateFilterLoading">
       <input type="text" class="form-control w-100 shadow-sm bg-dark text-light border-secondary" placeholder="Search by Equip ID" (input)="onSearch($event)" />
     </div>
   
 
 <!-- Tool Cards (Scrollable Grid) -->
-<div class="tool-list-scrollable" *ngIf="!isLoading">
+<div class="tool-list-scrollable" *ngIf="!isLoading && !isDateFilterLoading">
   <div class="tool-card" 
        *ngFor="let tool of visibleTools; trackBy: trackByEquipId"
        [@fadeInOut]
@@ -274,21 +278,24 @@
     </div>
   </div>
 </div>
-<div class="d-flex justify-content-center mt-2" *ngIf="filteredTools.length > 14">
+
+<!-- See More/See Less Button for Tool Cards -->
+<div class="d-flex justify-content-center mt-2" *ngIf="!isLoading && !isDateFilterLoading && filteredTools.length > 14">
   <button class="see-more-btn" (click)="toggleShowAllTools()">
     {{ showAllTools ? 'See Less' : 'See More' }}
   </button>
 </div>
 
 <!-- Error Location Leaderboard Section -->
-<div class="locations-label">
+<div class="locations-label" *ngIf="!isLoading && !isDateFilterLoading">
   Locations
   <span class="filter-indicator" *ngIf="hasActiveFilter()">
     <i class="fas fa-filter"></i>
     {{ getFilterIndicatorText() }}
   </span>
 </div>
-<div id="locations-section" class="container-fluid" *ngIf="!isLoading && errorLocationData.length > 0">
+
+<div id="locations-section" class="container-fluid" *ngIf="!isLoading && !isDateFilterLoading && errorLocationData.length > 0">
   <div class="card leaderboard-card">
     <div class="card-body">
       <h3 class="section-title">📍 Top Error Locations Leaderboard</h3>
@@ -402,7 +409,7 @@
 </div>
 
 <!-- Section: Top Error Locations -->
-<div class="flex-row-scroll mt-5" *ngIf="!isLoading">
+<div class="flex-row-scroll mt-5" *ngIf="!isLoading && !isDateFilterLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Top 10 Error Locations</h3>
     <div class="chart-summary-flex">
@@ -443,7 +450,7 @@
 </div>
 
 <!-- Section: Error Location Trends -->
-<div class="flex-row-scroll mt-5" *ngIf="!isLoading">
+<div class="flex-row-scroll mt-5" *ngIf="!isLoading && !isDateFilterLoading">
   <div class="scroll-chart">
     <h3 class="section-title">Error Location Trends by Month</h3>
     <!-- Filter Notification -->

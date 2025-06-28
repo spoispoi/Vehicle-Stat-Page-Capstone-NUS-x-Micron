@@ -1,4 +1,3 @@
-
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -21,10 +20,13 @@ export class DateFilterComponent implements OnInit {
   @Input() earliestDate: string = '';
   @Output() dateRangeChange = new EventEmitter<DateRange>();
   @Output() filterCleared = new EventEmitter<void>();
+  @Output() loadingStarted = new EventEmitter<void>();
+  @Output() loadingEnded = new EventEmitter<void>();
   
   maxDate: string = '';
   private _isFilterApplied: boolean = false;
   activeQuickRange: string = 'all'; // Track active quick range
+  isInternalLoading: boolean = false;
   
   ngOnInit() {
     const today = new Date();
@@ -109,6 +111,7 @@ export class DateFilterComponent implements OnInit {
   
   applyFilter(): void {
     if (this.hasValidDates()) {
+      this.startLoading();
       this.emitDateRangeChange();
     }
   }
@@ -118,6 +121,7 @@ export class DateFilterComponent implements OnInit {
     this.endDate = '';
     this.activeQuickRange = 'all'; // Set to 'all' when cleared
     this.updateFilterApplied();
+    this.startLoading();
     this.filterCleared.emit();
   }
 
@@ -169,8 +173,19 @@ export class DateFilterComponent implements OnInit {
     // Update filter applied status
     this.updateFilterApplied();
     
-    // Always emit the change, even for 'all' case
+    // Start loading and emit the change
+    this.startLoading();
     this.emitDateRangeChange();
+  }
+  
+  private startLoading(): void {
+    this.isInternalLoading = true;
+    this.loadingStarted.emit();
+  }
+  
+  stopLoading(): void {
+    this.isInternalLoading = false;
+    this.loadingEnded.emit();
   }
   
   private emitDateRangeChange() {
