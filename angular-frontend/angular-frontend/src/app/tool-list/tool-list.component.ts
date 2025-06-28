@@ -70,6 +70,7 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   errorToEquipMap: { [key: string]: { name: string; value: number }[] } = {};
   equipToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
   monthToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
+  monthToErrorMapFiltered: { [key: string]: { name: string; value: number }[] } = {}; // For summary table (affected by date filter)
 
   errorRowLoading: { [key: string]: boolean } = {};
   equipRowLoading: { [key: string]: boolean } = {};
@@ -163,6 +164,9 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   showLocationDropdown: boolean = false;
   appliedLocationFilter: string = '';
 
+  // Add new properties for complete data
+  completeTools: any[] = []; // Complete dataset without date filters for charts that should show everything
+
   constructor(
     private toolService: ToolService,
     private renderer: Renderer2,
@@ -172,6 +176,8 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.loadTools();
+    // Load complete data for charts that should not be affected by date filters
+    this.loadCompleteData();
     // Open the summary card for the top error by default
     setTimeout(() => {
       if (this.top10ErrorData && this.top10ErrorData.length > 0) {
@@ -201,6 +207,97 @@ export class ToolListComponent implements OnInit, AfterViewInit {
         console.error('Error loading tools:', error);
         this.isLoading = false;
       }
+    });
+  }
+
+  loadCompleteData(): void {
+    // Load the complete dataset without date filters for charts that should be independent
+    this.toolService.getTools('', '').subscribe({
+      next: (tools) => {
+        console.log('Complete data received:', tools);
+        this.completeTools = tools;
+        this.processCompleteData(tools);
+      },
+      error: (error) => {
+        console.error('Error loading complete data:', error);
+        this.completeTools = [];
+      }
+    });
+  }
+
+  private processCompleteData(tools: any[]): void {
+    // Process complete data for charts that should not be affected by date filters
+    
+    // 1. Error Trend by Month - use complete data (unchanged by date filters)
+    this.errorTrendData = this.calculateMonthlyErrorTrend(tools);
+    // Note: top5Months is now calculated based on filtered data in processToolsData()
+
+    // 2. Error Trend by Error Type - use complete data
+    this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))];
+    this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
+    this.filteredErrorTypes = [...this.allErrorTypes];
+    this.generateMultiLineChart();
+
+    // 3. Error Location Trend by Month - use complete data
+    this.allLocationTypes = [...new Set(tools.map(t => {
+      const location = this.extractErrorLocation(t.error_description);
+      return location;
+    }).filter(location => location && location !== 'Unknown' && !location.startsWith('8') && location.length > 0))];
+    
+    // Select the top 5 locations by count from complete data
+    const locationCounts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
+    tools.forEach(t => {
+      if (t.error_name && t.error_name !== 'Unknown') {
+        const location = this.extractErrorLocation(t.error_description);
+        if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
+        
+        const uniqueKey = `${t.state_in_date}_${location}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          locationCounts[location] = (locationCounts[location] || 0) + 1;
+        }
+      }
+    });
+    
+    this.selectedLocationTypes = Object.entries(locationCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name]) => name);
+    
+    this.filteredLocationTypes = [...this.allLocationTypes];
+    this.generateLocationMultiLineChart();
+
+    // Process month data for the complete dataset (for Error Trend by Month chart)
+    this.errorTrendData.forEach(month => {
+      this.monthRowLoading[month.name] = true;
+      console.log(`Loading complete data for month: ${month.name}`);
+      setTimeout(() => {
+        this.monthToErrorMap[month.name] = this.getTopErrorsForMonth(month.name);
+        console.log(`Complete data for month ${month.name}:`, this.monthToErrorMap[month.name]);
+        this.monthRowLoading[month.name] = false;
+      }, 300);
+    });
+
+    console.log('Complete data processed for unfiltered charts');
+  }
+
+  private calculateTop5MonthsFromFilteredData(tools: any[]): void {
+    // Calculate top 5 months based on filtered data (affected by date filter)
+    const monthlyTrend = this.calculateMonthlyErrorTrend(tools);
+    this.top5Months = [...monthlyTrend].sort((a, b) => b.value - a.value).slice(0, 5);
+    console.log('Top 5 months calculated from filtered data:', this.top5Months);
+    
+    // Populate month data for summary table using filtered data
+    this.top5Months.forEach(month => {
+      this.monthRowLoading[month.name] = true;
+      console.log(`Loading filtered data for month: ${month.name}`);
+      setTimeout(() => {
+        this.monthToErrorMapFiltered[month.name] = this.getTopErrorsForMonthFromFilteredData(month.name);
+        console.log(`Filtered data for month ${month.name}:`, this.monthToErrorMapFiltered[month.name]);
+        this.monthRowLoading[month.name] = false;
+      }, 300);
     });
   }
 
@@ -238,12 +335,14 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.startDate = dateRange.startDate;
     this.endDate = dateRange.endDate;
     this.loadTools();
+    // Note: loadCompleteData() is not called here, so the unfiltered charts remain unchanged
   }
 
   onFilterCleared(): void {
     this.startDate = '';
     this.endDate = '';
     this.loadTools();
+    // Note: loadCompleteData() is not called here, so the unfiltered charts remain unchanged
   }
 
   private processToolsData(tools: any[]): void {
@@ -262,8 +361,14 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.calculateKpiData(tools, errorCounts, equipIdErrorCounts);
     this.processLocationKpi(tools);
     this.processErrorLocations(); // Process error locations for leaderboard
-    this.debugMonthlyData(tools); // checking for chart data first months low
-    this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // checking for chart data first months low
+    
+    // Calculate top 5 months based on filtered data (affected by date filter)
+    this.calculateTop5MonthsFromFilteredData(tools);
+    
+    // Note: The following charts are now handled by processCompleteData() and use unfiltered data
+    // this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // Moved to processCompleteData
+    // this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5); // Moved to processCompleteData
+    
     // Calculate top 10 equipment IDs once
     this.top10EquipIds = Object.entries(equipIdErrorCounts)
       .sort((a, b) => b[1] - a[1])
@@ -294,9 +399,11 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       }, 300);
     });
 
-    this.errorTrendData = this.calculateMonthlyErrorTrend(tools);
+    // Note: errorTrendData is now handled by processCompleteData()
+    // this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // Moved to processCompleteData
 
-    this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5);
+    // Note: top5Months is now handled by processCompleteData()
+    // this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5); // Moved to processCompleteData
 
     this.equipIdErrorData = this.formatEquipIdChartData(equipIdErrorCounts);
 
@@ -320,52 +427,20 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       }, 300);
     });
 
-    this.errorTrendData.forEach(month => {
-      this.monthRowLoading[month.name] = true;
-      console.log(`Loading data for month: ${month.name}`); // Debugging statement
-      setTimeout(() => {
-        this.monthToErrorMap[month.name] = this.getTopErrorsForMonth(month.name);
-        console.log(`Data for month ${month.name}:`, this.monthToErrorMap[month.name]); // Debugging statement
-        this.monthRowLoading[month.name] = false;
-      }, 300);
-    });
+    // Note: Month data processing is now handled by processCompleteData()
+    // this.errorTrendData.forEach(month => { ... }); // Moved to processCompleteData
 
-    this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))];
-    this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
-    this.filteredErrorTypes = [...this.allErrorTypes]; // Initialize filteredErrorTypes
-    this.generateMultiLineChart();
+    // Note: Error types and multi-line chart are now handled by processCompleteData()
+    // this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))]; // Moved to processCompleteData
+    // this.selectedErrorTypes = this.allErrorTypes.slice(0, 5); // Moved to processCompleteData
+    // this.filteredErrorTypes = [...this.allErrorTypes]; // Moved to processCompleteData
+    // this.generateMultiLineChart(); // Moved to processCompleteData
 
-    // Initialize location types for location trend chart
-    this.allLocationTypes = [...new Set(tools.map(t => {
-      const location = this.extractErrorLocation(t.error_description);
-      return location;
-    }).filter(location => location && location !== 'Unknown' && !location.startsWith('8') && location.length > 0))];
-    
-    // Select the top 5 locations by count
-    const locationCounts: { [key: string]: number } = {};
-    const uniqueCombinations = new Set<string>();
-    
-    tools.forEach(t => {
-      if (t.error_name && t.error_name !== 'Unknown') {
-        const location = this.extractErrorLocation(t.error_description);
-        if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
-        
-        const uniqueKey = `${t.state_in_date}_${location}`;
-        if (!uniqueCombinations.has(uniqueKey)) {
-          uniqueCombinations.add(uniqueKey);
-          locationCounts[location] = (locationCounts[location] || 0) + 1;
-        }
-      }
-    });
-    
-    // Select the top 5 locations by count
-    this.selectedLocationTypes = Object.entries(locationCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5) // Select top 5 locations
-      .map(([name]) => name);
-    
-    this.filteredLocationTypes = [...this.allLocationTypes]; // Initialize filteredLocationTypes
-    this.generateLocationMultiLineChart();
+    // Note: Location types and location multi-line chart are now handled by processCompleteData()
+    // this.allLocationTypes = [...new Set(tools.map(t => { ... }))]; // Moved to processCompleteData
+    // this.selectedLocationTypes = Object.entries(locationCounts) ... // Moved to processCompleteData
+    // this.filteredLocationTypes = [...this.allLocationTypes]; // Moved to processCompleteData
+    // this.generateLocationMultiLineChart(); // Moved to processCompleteData
 
     // Load location data for top 5 locations (similar to Top 10 Errors)
     this.topErrorLocationsData.slice(0, 5).forEach(location => {
@@ -403,49 +478,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     //this.renderToolList();
   }
 
-//   renderToolList(): void {
-//     const container = this.document.getElementById('tool-list');
-//     if (!container) return;
-//     container.innerHTML = '';
-//     const gridContainer = this.renderer.createElement('div');
-// this.renderer.addClass(gridContainer, 'tool-grid'); // this class will define the grid layout
-
-// this.filteredTools.forEach(tool => {
-//   const card = this.renderer.createElement('div');
-//   this.renderer.addClass(card, 'card');
-//   this.renderer.addClass(card, 'shadow-sm');
-
-//   const cardBody = this.renderer.createElement('div');
-//   this.renderer.addClass(cardBody, 'card-body');
-
-//   const title = this.renderer.createElement('h5');
-//   this.renderer.addClass(title, 'card-title');
-//   title.textContent = tool.equip_id;
-
-//   const text = this.renderer.createElement('p');
-//   this.renderer.addClass(text, 'card-text');
-//   text.innerHTML = `
-//     <strong>Most Recent Error:</strong> ${tool.most_recent_error || 'N/A'}<br>
-//     <strong>Most Recent Date:</strong> ${tool.most_recent_date || 'N/A'}<br>
-//   `;
-
-//   const button = this.renderer.createElement('button');
-//   this.renderer.addClass(button, 'btn');
-//   this.renderer.addClass(button, 'btn-primary');
-//   button.textContent = 'View Statistics';
-//   this.renderer.listen(button, 'click', () => this.navigateToStatistics(tool.equip_id));
-
-//   this.renderer.appendChild(cardBody, title);
-//   this.renderer.appendChild(cardBody, text);
-//   this.renderer.appendChild(cardBody, button);
-//   this.renderer.appendChild(card, cardBody);
-//   this.renderer.appendChild(gridContainer, card);
-// });
-
-// // Replace old container contents with new grid
-// this.renderer.appendChild(container, gridContainer);
-
-//   }
   navigateToStatistics(equipId: string): void {
     this.router.navigate(['/statistics', equipId]);
   }
@@ -635,7 +667,30 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     const counts: { [key: string]: number } = {};
     const uniqueCombinations = new Set<string>();
     
-    this.toolsRaw.forEach(t => {
+    // Use complete data for Error Trend by Month chart (unchanged by date filters)
+    const dataSource = this.completeTools;
+    
+    dataSource.forEach(t => {
+      const monthKey = this.getLocalMonthKey(t.state_in_date);
+      if (monthKey === month && t.error_name !== 'Unknown') {
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        }
+      }
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);
+  }
+
+  getTopErrorsForMonthFromFilteredData(month: string): any[] {
+    const counts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
+    // Use filtered data for summary table (affected by date filter)
+    const dataSource = this.toolsRaw;
+    
+    dataSource.forEach(t => {
       const monthKey = this.getLocalMonthKey(t.state_in_date);
       if (monthKey === month && t.error_name !== 'Unknown') {
         const uniqueKey = `${t.state_in_date}_${t.error_name}`;
@@ -661,6 +716,11 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   }
 
   generateMultiLineChart(): void {
+    console.log('generateMultiLineChart called - using complete data for lines to show full timeline trends');
+    console.log('Selected errors:', this.selectedErrorTypes);
+    console.log('Filtered tools count:', this.toolsRaw.length);
+    console.log('Complete tools count:', this.completeTools.length);
+    
     const map: { [error: string]: { [month: string]: number } } = {};
     const uniqueCombinations: { [error: string]: { [month: string]: Set<string> } } = {};
     
@@ -669,18 +729,13 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       uniqueCombinations[e] = {};
     });
   
-    // Apply date filtering to multi-line chart as well
-    const startDateObj = this.startDate ? new Date(this.startDate) : null;
-    const endDateObj = this.endDate ? new Date(this.endDate) : null;
+    // Use complete data for the chart lines to show trends across entire timeline
+    const dataSource = this.completeTools;
+    console.log('Using complete data with', dataSource.length, 'records for chart lines to show full timeline');
   
-    this.toolsRaw.forEach(t => {
+    dataSource.forEach(t => {
       const e = t.error_name;
       if (!this.selectedErrorTypes.includes(e)) return;
-      
-      // Apply date filtering
-      const toolDate = new Date(t.state_in_date);
-      if (startDateObj && toolDate < startDateObj) return;
-      if (endDateObj && toolDate > endDateObj) return;
       
       const monthKey = this.getLocalMonthKey(t.state_in_date);
       
@@ -695,12 +750,18 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       }
     });
   
-    // Collect all unique months to ensure sorting order is consistent
+    // Always use all months from the complete dataset for the x-axis
     const allMonths = new Set<string>();
-    Object.values(map).forEach(monthMap => {
-      Object.keys(monthMap).forEach(month => allMonths.add(month));
+    
+    // Add all months from the complete dataset (not just filtered data)
+    this.completeTools.forEach(t => {
+      if (t.state_in_date) {
+        allMonths.add(this.getLocalMonthKey(t.state_in_date));
+      }
     });
+    
     const sortedMonths = Array.from(allMonths).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    console.log('Chart will show', sortedMonths.length, 'months on x-axis:', sortedMonths);
   
     this.errorTrendMultiLineData = Object.entries(map).map(([error, monthMap]) => ({
       name: error,
@@ -709,6 +770,8 @@ export class ToolListComponent implements OnInit, AfterViewInit {
         value: monthMap[month] || 0
       }))
     }));
+    
+    console.log('Generated chart data for', this.errorTrendMultiLineData.length, 'errors showing full timeline trends');
   }
 
   yAxisTickFormatting(value: string): string {
@@ -721,10 +784,16 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   }
   
   selectTopErrors(): void {
+    console.log('selectTopErrors called - using filtered data to determine top 5 errors');
+    
     const errorCounts: { [key: string]: number } = {};
     const uniqueCombinations = new Set<string>();
     
-    this.toolsRaw.forEach(t => {
+    // Use filtered data (toolsRaw) for top 5 calculation based on current date filter
+    const dataSource = this.toolsRaw;
+    console.log('Using filtered data with', dataSource.length, 'records to determine top errors');
+    
+    dataSource.forEach(t => {
       if (t.error_name && t.error_name !== 'Unknown') {
         const uniqueKey = `${t.state_in_date}_${t.error_name}`;
         if (!uniqueCombinations.has(uniqueKey)) {
@@ -738,6 +807,8 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([name]) => name);
+    
+    console.log('Selected top 5 errors from filtered data:', this.selectedErrorTypes);
   
     this.generateMultiLineChart();
   }
@@ -795,41 +866,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   isTop10Tool(equipId: string): boolean {
     return this.top10EquipIds.includes(equipId);
-  }
-  private debugMonthlyData(tools: any[]): void {
-    console.log('=== DEBUGGING MONTHLY DATA ===');
-    
-    // Group by month to see raw counts
-    const monthlyBreakdown: { [key: string]: any[] } = {};
-    
-    tools.forEach(tool => {
-      if (tool.error_name !== 'Unknown' && tool.state_in_date) {
-        const dateStr = tool.state_in_date.split('T')[0];
-        const [year, month] = dateStr.split('-');
-        const monthKey = `${year}-${month}`;
-        
-        if (!monthlyBreakdown[monthKey]) {
-          monthlyBreakdown[monthKey] = [];
-        }
-        monthlyBreakdown[monthKey].push(tool);
-      }
-    });
-  
-    // Log details for each month
-    Object.keys(monthlyBreakdown).sort().forEach(monthKey => {
-      const monthData = monthlyBreakdown[monthKey];
-      const uniqueErrors = new Set();
-      
-      monthData.forEach(tool => {
-        uniqueErrors.add(`${tool.state_in_date}_${tool.error_name}`);
-      });
-      
-      console.log(`Month ${monthKey}:`);
-      console.log(`  - Raw records: ${monthData.length}`);
-      console.log(`  - Unique errors: ${uniqueErrors.size}`);
-      console.log(`  - Date range: ${monthData[0]?.state_in_date} to ${monthData[monthData.length-1]?.state_in_date}`);
-      console.log(`  - Sample dates:`, monthData.slice(0, 3).map(t => t.state_in_date));
-    });
   }
 
   selectedErrorName: string | null = null;
@@ -1212,6 +1248,11 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   }
 
   generateLocationMultiLineChart(): void {
+    console.log('generateLocationMultiLineChart called - using complete data for lines to show full timeline trends');
+    console.log('Selected locations:', this.selectedLocationTypes);
+    console.log('Filtered tools count:', this.toolsRaw.length);
+    console.log('Complete tools count:', this.completeTools.length);
+    
     const map: { [location: string]: { [month: string]: number } } = {};
     const uniqueCombinations: { [location: string]: { [month: string]: Set<string> } } = {};
     
@@ -1220,22 +1261,15 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       uniqueCombinations[l] = {};
     });
   
-    // Apply date filtering to multi-line chart as well
-    const startDateObj = this.startDate ? new Date(this.startDate) : null;
-    const endDateObj = this.endDate ? new Date(this.endDate) : null;
+    // Use complete data for the chart lines to show trends across entire timeline
+    const dataSource = this.completeTools;
+    console.log('Using complete data with', dataSource.length, 'records for chart lines to show full timeline');
   
-    this.toolsRaw.forEach(t => {
+    dataSource.forEach(t => {
       if (t.error_name === 'Unknown') return;
       
       const location = this.extractErrorLocation(t.error_description);
-      if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
-      
       if (!this.selectedLocationTypes.includes(location)) return;
-      
-      // Apply date filtering
-      const toolDate = new Date(t.state_in_date);
-      if (startDateObj && toolDate < startDateObj) return;
-      if (endDateObj && toolDate > endDateObj) return;
       
       const monthKey = this.getLocalMonthKey(t.state_in_date);
       
@@ -1250,22 +1284,18 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       }
     });
   
-    // Collect all unique months from the entire dataset to ensure complete x-axis
+    // Always use all months from the complete dataset for the x-axis
     const allMonths = new Set<string>();
     
-    // Add all months from the entire dataset (not just selected locations)
-    this.toolsRaw.forEach(t => {
+    // Add all months from the complete dataset (not just filtered data)
+    this.completeTools.forEach(t => {
       if (t.state_in_date) {
         allMonths.add(this.getLocalMonthKey(t.state_in_date));
       }
     });
     
-    // Also add months from selected locations (in case they're not in the main dataset)
-    Object.values(map).forEach(monthMap => {
-      Object.keys(monthMap).forEach(month => allMonths.add(month));
-    });
-    
     const sortedMonths = Array.from(allMonths).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    console.log('Chart will show', sortedMonths.length, 'months on x-axis:', sortedMonths);
   
     this.errorLocationTrendMultiLineData = Object.entries(map).map(([location, monthMap]) => ({
       name: location,
@@ -1274,6 +1304,8 @@ export class ToolListComponent implements OnInit, AfterViewInit {
         value: monthMap[month] || 0
       }))
     }));
+
+    console.log('Generated chart data for', this.errorLocationTrendMultiLineData.length, 'locations showing full timeline trends');
 
     // Update the applied filter notification
     if (this.selectedLocationTypes.length === 0) {
@@ -1293,10 +1325,16 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   }
   
   selectTopLocations(): void {
+    console.log('selectTopLocations called - using filtered data to determine top 5 locations');
+    
     const locationCounts: { [key: string]: number } = {};
     const uniqueCombinations = new Set<string>();
     
-    this.toolsRaw.forEach(t => {
+    // Use filtered data (toolsRaw) for top 5 calculation based on current date filter
+    const dataSource = this.toolsRaw;
+    console.log('Using filtered data with', dataSource.length, 'records to determine top locations');
+    
+    dataSource.forEach(t => {
       if (t.error_name && t.error_name !== 'Unknown') {
         const location = this.extractErrorLocation(t.error_description);
         if (location.startsWith('8') || location === 'Unknown' || location.length === 0) return;
@@ -1313,6 +1351,8 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5) // Select top 5 locations
       .map(([name]) => name);
+    
+    console.log('Selected top 5 locations from filtered data:', this.selectedLocationTypes);
   
     this.generateLocationMultiLineChart();
   }

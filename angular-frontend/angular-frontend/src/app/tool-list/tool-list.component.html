@@ -178,8 +178,8 @@
             </div>
           </div>
           <ul class="list-unstyled ms-2 vehicle-list"
-              *ngIf="!monthRowLoading[item.name] && (monthToErrorMap[item.name]?.length || 0) > 0; else noMonthErrors">
-            <li *ngFor="let sub of monthToErrorMap[item.name]">
+              *ngIf="!monthRowLoading[item.name] && (monthToErrorMapFiltered[item.name]?.length || 0) > 0; else noMonthErrors">
+            <li *ngFor="let sub of monthToErrorMapFiltered[item.name]">
               <span class="vehicle-name">▸ {{ sub.name }}</span>
               <span class="badge vehicle-count-badge">{{ sub.value }}</span>
             </li>
