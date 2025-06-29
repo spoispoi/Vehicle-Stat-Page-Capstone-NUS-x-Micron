@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, CUSTOM_ELEMENTS_SCHEMA, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, Inject, CUSTOM_ELEMENTS_SCHEMA, ViewChild, ElementRef, AfterViewInit, HostListener } from '@angular/core';
 import { ToolService } from '../tool.service';
 import { Renderer2 } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
@@ -150,6 +150,10 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   selectedLocationName: string | null = null;
   locationToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
 
+  // Add properties for bar selection visual effects
+  selectedBar: { chartType: string; dataName: string; index: number } | null = null;
+  @ViewChild('chartContainer') chartContainer!: ElementRef;
+
   colorSchemeLocationTopCount: Color = {
     domain: [], // Will be populated dynamically like colorSchemeTopCount
     group: ScaleType.Ordinal,
@@ -194,6 +198,36 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.setCollapsedTableHeight();
+    
+    // Apply initial visual effects after charts are rendered
+    setTimeout(() => {
+      this.handleInitialChartEffects();
+    }, 500);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    // Check if click is outside of chart containers
+    const target = event.target as HTMLElement;
+    const chartContainers = this.document.querySelectorAll('.chart-panel, .scroll-chart');
+    let isInsideChart = false;
+    
+    chartContainers.forEach(container => {
+      if (container.contains(target)) {
+        isInsideChart = true;
+      }
+    });
+    
+    // If clicked outside charts, clear selection and visual effects
+    if (!isInsideChart && this.selectedBar) {
+      this.clearBarVisualEffects(this.selectedBar.chartType);
+      this.selectedBar = null;
+    }
   }
 
   loadTools(): void {
@@ -353,6 +387,12 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.startDate = dateRange.startDate;
     this.endDate = dateRange.endDate;
     this.isDateFilterLoading = true;
+    
+    // Clear current visual effects before loading new data
+    if (this.selectedBar) {
+      this.clearBarVisualEffects(this.selectedBar.chartType);
+    }
+    
     this.loadTools();
   }
 
@@ -361,6 +401,12 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.startDate = '';
     this.endDate = '';
     this.isDateFilterLoading = true;
+    
+    // Clear current visual effects before loading new data
+    if (this.selectedBar) {
+      this.clearBarVisualEffects(this.selectedBar.chartType);
+    }
+    
     this.loadTools();
   }
 
@@ -480,6 +526,11 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     if (!this.selectedLocationName && this.topErrorLocationsData.length > 0) {
       this.selectedLocationName = this.topErrorLocationsData[0].name;
     }
+
+    // After processing data, handle chart updates
+    this.handleChartUpdate('errors');
+    this.handleChartUpdate('equipment');
+    this.handleChartUpdate('locations');
   }
 
   toggleDarkMode(): void {
@@ -899,6 +950,16 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   onBarSelect(event: any) {
     const errorName = event.name;
+    const errorIndex = this.top10ErrorData.findIndex(item => item.name === errorName);
+    
+    // Set the selected bar for visual effect
+    if (this.selectedBar && this.selectedBar.chartType === 'errors' && this.selectedBar.dataName === errorName) {
+      this.selectedBar = null; // Deselect if clicking the same bar
+    } else {
+      this.selectedBar = { chartType: 'errors', dataName: errorName, index: errorIndex };
+      this.applyBarVisualEffectsByIndex('errors', errorIndex);
+    }
+    
     if (this.selectedErrorName === errorName) {
       this.selectedErrorName = null;
     } else if (this.selectedErrorName) {
@@ -935,6 +996,16 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   onEquipBarSelect(event: any) {
     const equipName = event.name;
+    const equipIndex = this.top20Equipments.findIndex(item => item.name === equipName);
+    
+    // Set the selected bar for visual effect
+    if (this.selectedBar && this.selectedBar.chartType === 'equipment' && this.selectedBar.dataName === equipName) {
+      this.selectedBar = null; // Deselect if clicking the same bar
+    } else {
+      this.selectedBar = { chartType: 'equipment', dataName: equipName, index: equipIndex };
+      this.applyBarVisualEffectsByIndex('equipment', equipIndex);
+    }
+    
     if (this.selectedEquipName === equipName) {
       this.selectedEquipName = null;
     } else if (this.selectedEquipName) {
@@ -970,6 +1041,16 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   // Location bar chart methods
   onLocationBarSelect(event: any) {
     const locationName = event.name;
+    const locationIndex = this.topErrorLocationsData.findIndex(item => item.name === locationName);
+    
+    // Set the selected bar for visual effect
+    if (this.selectedBar && this.selectedBar.chartType === 'locations' && this.selectedBar.dataName === locationName) {
+      this.selectedBar = null; // Deselect if clicking the same bar
+    } else {
+      this.selectedBar = { chartType: 'locations', dataName: locationName, index: locationIndex };
+      this.applyBarVisualEffectsByIndex('locations', locationIndex);
+    }
+    
     if (this.selectedLocationName === locationName) {
       this.selectedLocationName = null;
     } else if (this.selectedLocationName) {
@@ -997,6 +1078,19 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   closeLocationSummaryPanel() {
     this.selectedLocationName = null;
+  }
+
+  // Helper methods for bar selection visual effects
+  isErrorBarSelected(errorName: string): boolean {
+    return this.selectedBar?.chartType === 'errors' && this.selectedBar?.dataName === errorName;
+  }
+
+  isEquipmentBarSelected(equipName: string): boolean {
+    return this.selectedBar?.chartType === 'equipment' && this.selectedBar?.dataName === equipName;
+  }
+
+  isLocationBarSelected(locationName: string): boolean {
+    return this.selectedBar?.chartType === 'locations' && this.selectedBar?.dataName === locationName;
   }
 
   getErrorsForLocation(locationName: string): { name: string; value: number }[] {
@@ -1458,5 +1552,170 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       day: 'numeric', 
       year: 'numeric' 
     });
+  }
+
+  // Method to get CSS class for bars
+  getBarClass(chartType: string, itemName: string): string {
+    if (this.selectedBar && this.selectedBar.chartType === chartType && this.selectedBar.dataName === itemName) {
+      return 'selected-bar';
+    }
+    return this.selectedBar ? 'dimmed-bar' : '';
+  }
+
+  // Handle chart updates and reapply visual effects
+  private handleChartUpdate(chartType: string): void {
+    if (this.selectedBar && this.selectedBar.chartType === chartType) {
+      // Reapply visual effects after chart update
+      setTimeout(() => {
+        this.applyBarVisualEffectsByIndex(chartType, this.selectedBar!.index);
+      }, 300);
+    }
+  }
+
+  // Apply visual effects to the selected bar using index
+  private applyBarVisualEffectsByIndex(chartType: string, selectedIndex: number): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    setTimeout(() => {
+      const chartContainer = this.getChartContainer(chartType);
+      if (!chartContainer) return;
+      
+      // Clear any existing selected bars
+      const existingSelected = chartContainer.querySelectorAll('.selected-bar');
+      existingSelected.forEach(bar => {
+        bar.classList.remove('selected-bar');
+      });
+      
+      // Find all bars and apply the selection to the correct one
+      const bars = chartContainer.querySelectorAll('rect[class*="bar"], .bar');
+      if (bars.length > selectedIndex && selectedIndex >= 0) {
+        const selectedBar = bars[selectedIndex] as HTMLElement;
+        selectedBar.classList.add('selected-bar');
+      }
+    }, 100);
+  }
+
+  // Clear visual effects from bars
+  private clearBarVisualEffects(chartType: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    setTimeout(() => {
+      const chartContainer = this.getChartContainer(chartType);
+      if (!chartContainer) return;
+      
+      // Clear any existing selected bars
+      const existingSelected = chartContainer.querySelectorAll('.selected-bar');
+      existingSelected.forEach(bar => {
+        bar.classList.remove('selected-bar');
+      });
+    }, 100);
+  }
+
+  // Get the chart container based on chart type
+  private getChartContainer(chartType: string): Element | null {
+    // Only access DOM in browser environment
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    
+    // More specific selectors for each chart type
+    switch (chartType) {
+      case 'errors':
+        // Find the first horizontal bar chart (Top 10 Errors)
+        return this.document.querySelector('.chart-panel:has(ngx-charts-bar-horizontal)') || 
+               this.document.querySelector('ngx-charts-bar-horizontal');
+      case 'equipment':
+        // Find the vertical bar chart (Top Equipment by Error Count)
+        return this.document.querySelector('.chart-panel:has(ngx-charts-bar-vertical)') || 
+               this.document.querySelector('ngx-charts-bar-vertical');
+      case 'locations':
+        // Find the second horizontal bar chart (Top 10 Error Locations)
+        const horizontalCharts = this.document.querySelectorAll('ngx-charts-bar-horizontal');
+        return horizontalCharts.length > 1 ? horizontalCharts[1] : horizontalCharts[0];
+      default:
+        return null;
+    }
+  }
+
+  // Extract bar name from DOM element
+  private getBarName(barElement: HTMLElement, chartType: string): string {
+    // Only access DOM in browser environment
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    
+    // Method 1: Look for text elements that might contain the bar name
+    const textElements = barElement.parentElement?.querySelectorAll('text');
+    if (textElements) {
+      for (let i = 0; i < textElements.length; i++) {
+        const text = textElements[i].textContent?.trim();
+        if (text && text.length > 0 && text !== '0' && !text.match(/^\d+$/)) {
+          return text;
+        }
+      }
+    }
+    
+    // Method 2: Look for aria-label or data attributes
+    const ariaLabel = barElement.getAttribute('aria-label');
+    if (ariaLabel) {
+      return ariaLabel;
+    }
+    
+    // Method 3: Look for data attributes
+    const dataName = barElement.getAttribute('data-name');
+    if (dataName) {
+      return dataName;
+    }
+    
+    // Method 4: Try to find the bar name from the chart data
+    return this.getBarNameFromChartData(barElement, chartType);
+  }
+
+  // Get bar name from chart data by position
+  private getBarNameFromChartData(barElement: HTMLElement, chartType: string): string {
+    // Only access DOM in browser environment
+    if (typeof window === 'undefined') {
+      return '';
+    }
+    
+    try {
+      let chartData: any[] = [];
+      
+      switch (chartType) {
+        case 'errors':
+          chartData = this.top10ErrorData;
+          break;
+        case 'equipment':
+          chartData = this.top20Equipments;
+          break;
+        case 'locations':
+          chartData = this.topErrorLocationsData;
+          break;
+      }
+      
+      // Try to find the bar by its position in the chart
+      const bars = barElement.parentElement?.querySelectorAll('rect[class*="bar"], .bar');
+      if (bars && chartData.length > 0) {
+        const barIndex = Array.from(bars).indexOf(barElement);
+        if (barIndex >= 0 && barIndex < chartData.length) {
+          return chartData[barIndex].name;
+        }
+      }
+    } catch (error) {
+      console.warn('Error getting bar name from chart data:', error);
+    }
+    
+    return '';
+  }
+
+  // Handle initial chart effects
+  private handleInitialChartEffects(): void {
+    if (this.selectedBar) {
+      this.applyBarVisualEffectsByIndex(this.selectedBar.chartType, this.selectedBar.index);
+    }
   }
 }

@@ -77,7 +77,9 @@
             [showDataLabel]="true"
             [trimYAxisTicks]="false"
             class="white-labels"
-            (select)="onBarSelect($event)">
+            [class.bar-chart-with-selection]="selectedBar?.chartType === 'errors'"
+            (select)="onBarSelect($event)"
+            [showGridLines]="false">
           </ngx-charts-bar-horizontal>
         </div>
         <div class="sidebar-list">
@@ -120,7 +122,9 @@
           [showDataLabel]="true"
           [trimXAxisTicks]="false"
           class="white-labels"
-          (select)="onEquipBarSelect($event)">
+          [class.bar-chart-with-selection]="selectedBar?.chartType === 'equipment'"
+          (select)="onEquipBarSelect($event)"
+          [showGridLines]="false">
         </ngx-charts-bar-vertical>
       </div>
       <div class="sidebar-list">
@@ -160,7 +164,8 @@
         [xAxisLabel]="'Month'"
         [yAxisLabel]="'Error Count'"
         [legend]="false"
-        [autoScale]="true">
+        [autoScale]="true"
+        [showGridLines]="false">
       </ngx-charts-line-chart>
     </div>
   </div>
@@ -211,7 +216,7 @@
         [xAxis]="true"
         [yAxis]="true"
         [legend]="true"
-        [showGridLines]="true"
+        [showGridLines]="false"
         [roundDomains]="true"
         [xAxisLabel]="'Month'"
         [yAxisLabel]="'Error Count'">
@@ -426,7 +431,9 @@
           [showDataLabel]="true"
           [trimYAxisTicks]="false"
           class="white-labels"
-          (select)="onLocationBarSelect($event)">
+          [class.bar-chart-with-selection]="selectedBar?.chartType === 'locations'"
+          (select)="onLocationBarSelect($event)"
+          [showGridLines]="false">
         </ngx-charts-bar-horizontal>
       </div>
       <div class="sidebar-list">
@@ -465,7 +472,7 @@
         [xAxis]="true"
         [yAxis]="true"
         [legend]="true"
-        [showGridLines]="true"
+        [showGridLines]="false"
         [roundDomains]="true"
         [xAxisLabel]="'Month'"
         [yAxisLabel]="'Error Count'">
