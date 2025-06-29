@@ -197,6 +197,7 @@ def equipment_statistics(request, equip_id):
         latest_error_date=Max('state_in_date'),
     )
 
+    # Use FILTERED data for error notes (this affects the pie chart)
     error_notes_counts = {k: v for k, v in error_name_counts_filtered.items()}
     formatted_error_notes = {}
     for error_name, count in error_notes_counts.items():
@@ -238,8 +239,8 @@ def equipment_statistics(request, equip_id):
         "total_errors": total_distinct_errors_filtered,
         "most_common_event_code": most_common_event_code,
         "most_common_error_name": most_common_error_name,
-        "error_notes": formatted_error_notes,
-        "error_frequency": formatted_error_frequency,
+        "error_notes": formatted_error_notes,  # This now uses filtered data
+        "error_frequency": formatted_error_frequency,  # This uses unfiltered data for trends
         **agg_data_filtered
     }
     
@@ -249,4 +250,3 @@ def equipment_statistics(request, equip_id):
         data_response['latest_error_date'] = data_response['latest_error_date'].strftime('%Y-%m-%d %H:%M:%S')
 
     return JsonResponse(data_response)
-

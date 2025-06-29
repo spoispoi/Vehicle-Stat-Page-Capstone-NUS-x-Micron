@@ -3,6 +3,7 @@ SELECT EquipID
       ,EventCode2
       ,ErrorName
       ,EquipmentNotes
+      ,Report_WW
   FROM [AMHSHW].[dbo].[Ian_Full_Stack]
 
 

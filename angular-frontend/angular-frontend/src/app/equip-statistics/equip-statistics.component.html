@@ -185,57 +185,6 @@
       </div>
     </div>
 
-    <!-- WorkWeek Charts Section -->
-    <div class="row g-4 mt-4">
-      <!-- WorkWeek Error Trend Line -->
-      <div class="col-lg-6">
-        <div class="card chart-card">
-          <div class="card-body">
-            <h5 class="chart-title">📈 Total Error Trend (WorkWeek)</h5>
-            <ngx-charts-line-chart
-              [results]="lineChartWorkWeekData"
-              [scheme]="colorScheme"
-              [xAxis]="true"
-              [yAxis]="true"
-              [legend]="false"
-              [xAxisLabel]="'WorkWeek'"
-              [yAxisLabel]="'Total Errors'"
-              [autoScale]="true"
-              [curve]="curve"
-              [timeline]="false"
-              [showGridLines]="false"
-              [yScaleMin]="0"
-              (select)="onWorkWeekTrendSelect($event)">
-            </ngx-charts-line-chart>
-          </div>
-        </div>
-      </div>
-    
-      <!-- WorkWeek Error Count -->
-      <div class="col-lg-6">
-        <div class="card chart-card">
-          <div class="card-body">
-            <h5 class="chart-title">📅 WorkWeek Error Count</h5>
-            <ngx-charts-bar-vertical-stacked
-              [results]="errorFrequencyWorkWeekData"
-              [xAxisLabel]="'WorkWeek'"
-              [legend]="true"
-              [legendPosition]="legendPosition"
-              [scheme]="colorScheme"
-              [xAxisTickFormatting]="formatXAxisTick"
-              [yAxisLabel]="'Count'"
-              [showXAxisLabel]="true"
-              [showYAxisLabel]="true"
-              [xAxis]="true"
-              [yAxis]="true"
-              [gradient]="true"
-              (select)="onWorkWeekSelect($event)">
-            </ngx-charts-bar-vertical-stacked>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Filter Alert -->
     <div *ngIf="selectedErrorName" class="alert alert-filter mt-5 d-flex justify-content-between align-items-center px-4 py-3 rounded">
       <div>

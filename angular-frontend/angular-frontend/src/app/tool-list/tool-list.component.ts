@@ -51,8 +51,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   errorData: any[] = [];
   errorTrendData: any[] = [];
   errorTrendMultiLineData: any[] = [];
-  errorTrendWorkWeekData: any[] = [];
-  errorTrendWorkWeekMultiLineData: any[] = [];
   top10ErrorData: any[] = [];
   equipIdErrorData: any[] = [];
   allErrorTypes: string[] = [];
@@ -74,22 +72,17 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   equipToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
   monthToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
   monthToErrorMapFiltered: { [key: string]: { name: string; value: number }[] } = {}; // For summary table (affected by date filter)
-  workWeekToErrorMap: { [key: string]: { name: string; value: number }[] } = {};
-  workWeekToErrorMapFiltered: { [key: string]: { name: string; value: number }[] } = {};
 
   errorRowLoading: { [key: string]: boolean } = {};
   equipRowLoading: { [key: string]: boolean } = {};
   monthRowLoading: { [key: string]: boolean } = {};
-  workWeekRowLoading: { [key: string]: boolean } = {};
 
   expandedErrorIndex: number | null = null;
   expandedEquipIndex: number | null = null;
   expandedMonthIndex: number | null = null;
-  expandedWorkWeekIndex: number | null = null;
 
   
   top5Months: any[] = [];
-  top5WorkWeeks: any[] = [];
   top20Equipments: any[] = [];
 
   // KPI Properties
@@ -104,7 +97,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   isDarkMode: boolean = false;
 
   showDropdown: boolean = false;
-  showWorkWeekDropdown: boolean = false;
 
   view: [number, number] = [1600, 1000];
   
@@ -167,13 +159,11 @@ export class ToolListComponent implements OnInit, AfterViewInit {
 
   // Error Location Trend Chart properties
   errorLocationTrendMultiLineData: any[] = [];
-  errorLocationTrendWorkWeekMultiLineData: any[] = []; // New property for WorkWeek error location trend
   allLocationTypes: string[] = [];
   selectedLocationTypes: string[] = [];
   searchLocationTerm: string = '';
   filteredLocationTypes: string[] = [];
   showLocationDropdown: boolean = false;
-  showLocationWorkWeekDropdown: boolean = false; // New property for WorkWeek location dropdown state
   appliedLocationFilter: string = '';
 
   // Add new properties for complete data
@@ -259,18 +249,13 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     this.errorTrendData = this.calculateMonthlyErrorTrend(tools);
     // Note: top5Months is now calculated based on filtered data in processToolsData()
 
-    // 2. Error Trend by WorkWeek - use complete data (unchanged by date filters)
-    this.errorTrendWorkWeekData = this.calculateWorkWeekErrorTrend(tools);
-    // Note: top5WorkWeeks is now calculated based on filtered data in processToolsData()
-
-    // 3. Error Trend by Error Type - use complete data
+    // 2. Error Trend by Error Type - use complete data
     this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))];
     this.selectedErrorTypes = this.allErrorTypes.slice(0, 5);
     this.filteredErrorTypes = [...this.allErrorTypes];
     this.generateMultiLineChart();
-    this.generateWorkWeekMultiLineChart();
 
-    // 4. Error Location Trend by Month - use complete data
+    // 3. Error Location Trend by Month - use complete data
     this.allLocationTypes = [...new Set(tools.map(t => {
       const location = this.extractErrorLocation(t.error_description);
       return location;
@@ -300,7 +285,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     
     this.filteredLocationTypes = [...this.allLocationTypes];
     this.generateLocationMultiLineChart();
-    this.generateLocationWorkWeekMultiLineChart();
 
     // Process month data for the complete dataset (for Error Trend by Month chart)
     this.errorTrendData.forEach(month => {
@@ -313,25 +297,7 @@ export class ToolListComponent implements OnInit, AfterViewInit {
       }, 300);
     });
 
-    // Process workweek data for the complete dataset (for Error Trend by WorkWeek chart)
-    this.errorTrendWorkWeekData.forEach(workWeek => {
-      this.workWeekRowLoading[workWeek.name] = true;
-      console.log(`Loading complete data for workweek: ${workWeek.name}`);
-      setTimeout(() => {
-        this.workWeekToErrorMap[workWeek.name] = this.getTopErrorsForWorkWeek(workWeek.name);
-        console.log(`Complete data for workweek ${workWeek.name}:`, this.workWeekToErrorMap[workWeek.name]);
-        this.workWeekRowLoading[workWeek.name] = false;
-      }, 300);
-    });
-
     console.log('Complete data processed for unfiltered charts');
-  }
-
-  private regenerateWorkWeekCharts(): void {
-    // Regenerate workweek charts with filtered data when date filters change
-    console.log('Regenerating workweek charts with filtered data');
-    this.generateWorkWeekMultiLineChart();
-    this.generateLocationWorkWeekMultiLineChart();
   }
 
   private calculateTop5MonthsFromFilteredData(tools: any[]): void {
@@ -348,24 +314,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
         this.monthToErrorMapFiltered[month.name] = this.getTopErrorsForMonthFromFilteredData(month.name);
         console.log(`Filtered data for month ${month.name}:`, this.monthToErrorMapFiltered[month.name]);
         this.monthRowLoading[month.name] = false;
-      }, 300);
-    });
-  }
-
-  private calculateTop5WorkWeeksFromFilteredData(tools: any[]): void {
-    // Calculate top 5 workweeks based on filtered data (affected by date filter)
-    const workWeekTrend = this.calculateWorkWeekErrorTrend(tools);
-    this.top5WorkWeeks = [...workWeekTrend].sort((a, b) => b.value - a.value).slice(0, 5);
-    console.log('Top 5 workweeks calculated from filtered data:', this.top5WorkWeeks);
-    
-    // Populate workweek data for summary table using filtered data
-    this.top5WorkWeeks.forEach(workWeek => {
-      this.workWeekRowLoading[workWeek.name] = true;
-      console.log(`Loading filtered data for workweek: ${workWeek.name}`);
-      setTimeout(() => {
-        this.workWeekToErrorMapFiltered[workWeek.name] = this.getTopErrorsForWorkWeekFromFilteredData(workWeek.name);
-        console.log(`Filtered data for workweek ${workWeek.name}:`, this.workWeekToErrorMapFiltered[workWeek.name]);
-        this.workWeekRowLoading[workWeek.name] = false;
       }, 300);
     });
   }
@@ -444,17 +392,194 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     // Calculate top 5 months based on filtered data (affected by date filter)
     this.calculateTop5MonthsFromFilteredData(tools);
     
-    // Calculate top 5 workweeks based on filtered data (affected by date filter)
-    this.calculateTop5WorkWeeksFromFilteredData(tools);
+    // Note: The following charts are now handled by processCompleteData() and use unfiltered data
+    // this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // Moved to processCompleteData
+    // this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5); // Moved to processCompleteData
     
-    // Update the main Error Trend by WorkWeek chart with filtered data
-    this.errorTrendWorkWeekData = this.calculateWorkWeekErrorTrend(tools);
-    
-    // Regenerate workweek charts with filtered data
-    this.regenerateWorkWeekCharts();
+    // Calculate top 10 equipment IDs once
+    this.top10EquipIds = Object.entries(equipIdErrorCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([equipId]) => equipId);
+
+    const groupedTools = this.groupToolsByEquipId(tools);
+    this.tools = groupedTools;
+    this.filteredTools = [...this.tools];
+    this.sortByErrorCount();
+
+    this.top10ErrorData = this.formatTop10ChartData(errorCounts);
+
+    // Set the default summary card to the top error after data is ready
+    if (!this.selectedErrorName && this.top10ErrorData.length > 0) {
+      this.selectedErrorName = this.top10ErrorData[0].name;
+    }
+
+    this.colorSchemeTopCount.domain = this.top10ErrorData.map((item, index) => 
+      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
+    );
+
+    this.top10ErrorData.slice(0, 5).forEach(error => {
+      this.errorRowLoading[error.name] = true;
+      setTimeout(() => {
+        this.errorToEquipMap[error.name] = this.getEquipmentsForError(error.name);
+        this.errorRowLoading[error.name] = false;
+      }, 300);
+    });
+
+    // Note: errorTrendData is now handled by processCompleteData()
+    // this.errorTrendData = this.calculateMonthlyErrorTrend(tools); // Moved to processCompleteData
+
+    // Note: top5Months is now handled by processCompleteData()
+    // this.top5Months = [...this.errorTrendData].sort((a, b) => b.value - a.value).slice(0, 5); // Moved to processCompleteData
+
+    this.equipIdErrorData = this.formatEquipIdChartData(equipIdErrorCounts);
+
+    // Limit to top 20 equipments
+    this.top20Equipments = this.equipIdErrorData.slice(0, 50);
+
+    // Set the default summary card to the top equipment after data is ready
+    if (!this.selectedEquipName && this.top20Equipments.length > 0) {
+      this.selectedEquipName = this.top20Equipments[0].name;
+    }
+
+    this.colorSchemeEquipTopCount.domain = this.top20Equipments.map((item, index) => 
+      index === 0 ? '#ff6347' : '#484848' // Top count in red color, others in nude color
+    );
+
+    this.equipIdErrorData.slice(0, 5).forEach(equip => {
+      this.equipRowLoading[equip.name] = true;
+      setTimeout(() => {
+        this.equipToErrorMap[equip.name] = this.getErrorsForEquip(equip.name);
+        this.equipRowLoading[equip.name] = false;
+      }, 300);
+    });
+
+    // Note: Month data processing is now handled by processCompleteData()
+    // this.errorTrendData.forEach(month => { ... }); // Moved to processCompleteData
+
+    // Note: Error types and multi-line chart are now handled by processCompleteData()
+    // this.allErrorTypes = [...new Set(tools.map(t => t.error_name).filter(name => name && name !== 'Unknown'))]; // Moved to processCompleteData
+    // this.selectedErrorTypes = this.allErrorTypes.slice(0, 5); // Moved to processCompleteData
+    // this.filteredErrorTypes = [...this.allErrorTypes]; // Moved to processCompleteData
+    // this.generateMultiLineChart(); // Moved to processCompleteData
+
+    // Note: Location types and location multi-line chart are now handled by processCompleteData()
+    // this.allLocationTypes = [...new Set(tools.map(t => { ... }))]; // Moved to processCompleteData
+    // this.selectedLocationTypes = Object.entries(locationCounts) ... // Moved to processCompleteData
+    // this.filteredLocationTypes = [...this.allLocationTypes]; // Moved to processCompleteData
+    // this.generateLocationMultiLineChart(); // Moved to processCompleteData
+
+    // Load location data for top 5 locations (similar to Top 10 Errors)
+    this.topErrorLocationsData.slice(0, 5).forEach(location => {
+      setTimeout(() => {
+        this.locationToErrorMap[location.name] = this.getErrorsForLocation(location.name);
+      }, 300);
+    });
+
+    // Set the default summary card to the top location after data is ready
+    if (!this.selectedLocationName && this.topErrorLocationsData.length > 0) {
+      this.selectedLocationName = this.topErrorLocationsData[0].name;
+    }
   }
 
-  private calculateMonthlyErrorTrend(tools: any[]): any[] {
+  toggleDarkMode(): void {
+    this.isDarkMode = !this.isDarkMode;
+  }
+
+  toggleError(index: number) {
+    this.expandedErrorIndex = this.expandedErrorIndex === index ? null : index;
+  }
+
+  toggleEquip(index: number) {
+    this.expandedEquipIndex = this.expandedEquipIndex === index ? null : index;
+  }
+
+  toggleMonth(index: number) {
+    this.expandedMonthIndex = this.expandedMonthIndex === index ? null : index;
+  }
+
+  onSearch(event: Event): void {
+    const searchTerm = (event.target as HTMLInputElement).value.trim().toLowerCase();
+    this.filteredTools = this.tools.filter(tool => tool.equip_id.toLowerCase().includes(searchTerm));
+    this.sortByErrorCount();
+    //this.renderToolList();
+  }
+
+  navigateToStatistics(equipId: string): void {
+    this.router.navigate(['/statistics', equipId]);
+  }
+
+  formatDate(dateString: string | null): string {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2);
+    const day = ('0' + date.getDate()).slice(-2);
+    const hours = ('0' + date.getHours()).slice(-2);
+    const minutes = ('0' + date.getMinutes()).slice(-2);
+    const seconds = ('0' + date.getSeconds()).slice(-2);
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  sortByEquipId(): void {
+    this.tools.sort((a, b) => a.equip_id.localeCompare(b.equip_id));
+    this.filteredTools.sort((a, b) => a.equip_id.localeCompare(b.equip_id));
+  }
+
+  groupToolsByEquipId(tools: any[]): any[] {
+    const grouped: { [key: string]: any[] } = {};
+    tools.forEach(tool => {
+      if (!grouped[tool.equip_id]) grouped[tool.equip_id] = [];
+      grouped[tool.equip_id].push(tool);
+    });
+    return Object.keys(grouped).map(equipId => {
+      const toolGroup = grouped[equipId];
+      const validErrors = toolGroup.filter(t => t.error_name !== 'Unknown');
+      if (validErrors.length === 0) return null;
+      
+      const mostRecent = validErrors.reduce((a, b) => new Date(a.state_in_date) > new Date(b.state_in_date) ? a : b);
+      
+      // Count unique state_in_date + error_name combinations
+      const uniqueCombinations = new Set<string>();
+      const countMap: { [key: string]: number } = {};
+      
+      validErrors.forEach(t => {
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          countMap[t.error_name] = (countMap[t.error_name] || 0) + 1;
+        }
+      });
+      
+      const topError = Object.entries(countMap).sort((a, b) => b[1] - a[1])[0][0];
+      return {
+        equip_id: equipId,
+        most_recent_error: mostRecent.error_name,
+        most_recent_date: this.formatDate(mostRecent.state_in_date),
+        top_error: topError,
+        error_count: uniqueCombinations.size
+      };
+    }).filter(x => x !== null);
+  }
+
+  calculateErrorCounts(tools: any[]): { [key: string]: number } {
+    const counts: { [key: string]: number } = {};
+    const uniqueCombinations = new Set<string>();
+    
+    tools.forEach(t => {
+      if (t.error_name && t.error_name !== 'Unknown') {
+        // Create unique key for state_in_date + error_name combination
+        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
+        if (!uniqueCombinations.has(uniqueKey)) {
+          uniqueCombinations.add(uniqueKey);
+          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
+        }
+      }
+    });
+    return counts;
+  }
+
+  calculateMonthlyErrorTrend(tools: any[]): any[] {
     console.log('Calculating monthly error trend from tools:', tools.length);
     console.log('Date filters applied:', { startDate: this.startDate, endDate: this.endDate });
     
@@ -497,156 +622,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     
     console.log('Filtered trend data:', result);
     return result;
-  }
-
-  calculateWorkWeekErrorTrend(tools: any[]): any[] {
-    console.log('Calculating WorkWeek error trend from tools:', tools.length);
-    console.log('Date filters applied:', { startDate: this.startDate, endDate: this.endDate });
-    
-    const map: { [workWeek: string]: number } = {};
-    const uniqueCombinations: { [workWeek: string]: Set<string> } = {};
-    
-    // Parse date filters
-    const startDateObj = this.startDate ? new Date(this.startDate) : null;
-    const endDateObj = this.endDate ? new Date(this.endDate) : null;
-    
-    tools.forEach(t => {
-      if (t.error_name !== 'Unknown') {
-        const toolDate = new Date(t.state_in_date);
-        
-        // Apply date filtering to trend data
-        if (startDateObj && toolDate < startDateObj) {
-          return; // Skip data before start date
-        }
-        if (endDateObj && toolDate > endDateObj) {
-          return; // Skip data after end date
-        }
-        
-        const workWeek = this.getWorkWeekKey(t.state_in_date);
-        
-        if (!uniqueCombinations[workWeek]) {
-          uniqueCombinations[workWeek] = new Set<string>();
-        }
-        
-        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
-        if (!uniqueCombinations[workWeek].has(uniqueKey)) {
-          uniqueCombinations[workWeek].add(uniqueKey);
-          map[workWeek] = (map[workWeek] || 0) + 1;
-        }
-      }
-    });
-  
-    // Create consistent workweek range based on date filters
-    const workWeekRange = this.generateWorkWeekRangeFromDateFilters();
-    
-    // Create result with consistent time series (including 0 values for empty workweeks)
-    const result = workWeekRange.map(workWeek => ({
-      name: workWeek,
-      value: map[workWeek] || 0
-    }));
-    
-    console.log('WorkWeek trend data with consistent time series:', result);
-    return result;
-  }
-
-  private getWorkWeekKey(dateString: string): string {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    
-    // Calculate workweek based on the rules:
-    // WW01 starts at January 3, 2025 to January 9, 2025
-    // WW02 starts at January 10, 2025 to January 16, 2025
-    // And so on...
-    
-    // Create a reference date for January 3rd of the year
-    const jan3rd = new Date(year, 0, 3); // January 3rd (month is 0-indexed)
-    
-    // Calculate days since January 3rd
-    const daysSinceJan3rd = Math.floor((date.getTime() - jan3rd.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // If the date is before January 3rd, it belongs to the previous year's workweeks
-    if (daysSinceJan3rd < 0) {
-      // For dates before Jan 3rd, we need to handle year transition
-      const prevYearJan3rd = new Date(year - 1, 0, 3);
-      const daysSincePrevYearJan3rd = Math.floor((date.getTime() - prevYearJan3rd.getTime()) / (1000 * 60 * 60 * 24));
-      const workWeekNumber = Math.floor(daysSincePrevYearJan3rd / 7) + 1;
-      const adjustedWorkWeek = ((workWeekNumber - 1) % 52) + 1;
-      // Add year prefix to differentiate from current year workweeks
-      return `${year-1}-WW${adjustedWorkWeek.toString().padStart(2, '0')}`;
-    }
-    
-    // Calculate workweek number (each workweek is 7 days starting from Jan 3rd)
-    const workWeekNumber = Math.floor(daysSinceJan3rd / 7) + 1;
-    
-    // Ensure workweek is between 1 and 52
-    const adjustedWorkWeek = ((workWeekNumber - 1) % 52) + 1;
-    
-    // Add year prefix to differentiate between years
-    return `${year}-WW${adjustedWorkWeek.toString().padStart(2, '0')}`;
-  }
-
-  private compareWorkWeeks(ww1: string, ww2: string): number {
-    // Handle year-prefixed workweek format (e.g., "2024-WW27", "2025-WW01")
-    const ww1Match = ww1.match(/(\d{4})-WW(\d{2})/);
-    const ww2Match = ww2.match(/(\d{4})-WW(\d{2})/);
-    
-    if (ww1Match && ww2Match) {
-      const year1 = parseInt(ww1Match[1]);
-      const year2 = parseInt(ww2Match[1]);
-      const ww1Num = parseInt(ww1Match[2]);
-      const ww2Num = parseInt(ww2Match[2]);
-      
-      // First compare by year, then by workweek number
-      if (year1 !== year2) {
-        return year1 - year2;
-      }
-      return ww1Num - ww2Num;
-    }
-    
-    // Fallback for old format (just "WW01", "WW02", etc.)
-    const ww1Num = parseInt(ww1.replace('WW', ''));
-    const ww2Num = parseInt(ww2.replace('WW', ''));
-    return ww1Num - ww2Num;
-  }
-
-  getTopErrorsForWorkWeek(workWeek: string): any[] {
-    const counts: { [key: string]: number } = {};
-    const uniqueCombinations = new Set<string>();
-    
-    // Use complete data for WorkWeek Error Trend chart (unchanged by date filters)
-    const dataSource = this.completeTools;
-    
-    dataSource.forEach(t => {
-      const workWeekKey = this.getWorkWeekKey(t.state_in_date);
-      if (workWeekKey === workWeek && t.error_name !== 'Unknown') {
-        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
-        if (!uniqueCombinations.has(uniqueKey)) {
-          uniqueCombinations.add(uniqueKey);
-          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
-        }
-      }
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);
-  }
-
-  getTopErrorsForWorkWeekFromFilteredData(workWeek: string): any[] {
-    const counts: { [key: string]: number } = {};
-    const uniqueCombinations = new Set<string>();
-    
-    // Use filtered data for summary table (affected by date filter)
-    const dataSource = this.toolsRaw;
-    
-    dataSource.forEach(t => {
-      const workWeekKey = this.getWorkWeekKey(t.state_in_date);
-      if (workWeekKey === workWeek && t.error_name !== 'Unknown') {
-        const uniqueKey = `${t.state_in_date}_${t.error_name}`;
-        if (!uniqueCombinations.has(uniqueKey)) {
-          uniqueCombinations.add(uniqueKey);
-          counts[t.error_name] = (counts[t.error_name] || 0) + 1;
-        }
-      }
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);
   }
 
   formatTop10ChartData(counts: { [key: string]: number }): any[] {
@@ -760,7 +735,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     if (index === -1) this.selectedErrorTypes.push(error);
     else this.selectedErrorTypes.splice(index, 1);
     this.generateMultiLineChart();
-    this.generateWorkWeekMultiLineChart();
   }
 
   onSearchError(event: Event): void {
@@ -827,106 +801,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     console.log('Generated chart data for', this.errorTrendMultiLineData.length, 'errors showing full timeline trends');
   }
 
-  generateWorkWeekMultiLineChart(): void {
-    console.log('generateWorkWeekMultiLineChart called - using filtered data and creating consistent time series');
-    console.log('Selected errors:', this.selectedErrorTypes);
-    console.log('Filtered tools count:', this.toolsRaw.length);
-    console.log('Complete tools count:', this.completeTools.length);
-    console.log('Date filters applied:', { startDate: this.startDate, endDate: this.endDate });
-    
-    const map: { [error: string]: { [workWeek: string]: number } } = {};
-    const uniqueCombinations: { [error: string]: { [workWeek: string]: Set<string> } } = {};
-    
-    this.selectedErrorTypes.forEach(e => {
-      map[e] = {};
-      uniqueCombinations[e] = {};
-    });
-  
-    // Use filtered data (toolsRaw) to respect date filters
-    const dataSource = this.toolsRaw;
-    console.log('Using filtered data with', dataSource.length, 'records for WorkWeek chart');
-  
-    dataSource.forEach(t => {
-      const e = t.error_name;
-      if (!this.selectedErrorTypes.includes(e)) return;
-      
-      const workWeekKey = this.getWorkWeekKey(t.state_in_date);
-      
-      if (!uniqueCombinations[e][workWeekKey]) {
-        uniqueCombinations[e][workWeekKey] = new Set<string>();
-      }
-      
-      const uniqueKey = `${t.state_in_date}_${t.error_name}`;
-      if (!uniqueCombinations[e][workWeekKey].has(uniqueKey)) {
-        uniqueCombinations[e][workWeekKey].add(uniqueKey);
-        map[e][workWeekKey] = (map[e][workWeekKey] || 0) + 1;
-      }
-    });
-  
-    // Create consistent workweek range based on date filters
-    const workWeekRange = this.generateWorkWeekRangeFromDateFilters();
-    console.log('WorkWeek chart will show', workWeekRange.length, 'workweeks on x-axis:', workWeekRange);
-  
-    this.errorTrendWorkWeekMultiLineData = Object.entries(map).map(([error, workWeekMap]) => ({
-      name: error,
-      series: workWeekRange.map(workWeek => ({
-        name: workWeek,
-        value: workWeekMap[workWeek] || 0
-      }))
-    }));
-    
-    console.log('Generated WorkWeek chart data for', this.errorTrendWorkWeekMultiLineData.length, 'errors with consistent time series');
-  }
-
-  private generateWorkWeekRangeFromDateFilters(): string[] {
-    const workWeekRange: string[] = [];
-    
-    // If no date filters, use all workweeks from complete data
-    if (!this.startDate && !this.endDate) {
-      const allWorkWeeks = new Set<string>();
-      this.completeTools.forEach(t => {
-        if (t.state_in_date) {
-          allWorkWeeks.add(this.getWorkWeekKey(t.state_in_date));
-        }
-      });
-      return Array.from(allWorkWeeks).sort((a, b) => this.compareWorkWeeks(a, b));
-    }
-    
-    // Determine start and end dates for workweek range
-    let startDate: Date;
-    let endDate: Date;
-    
-    if (this.startDate && this.endDate) {
-      startDate = new Date(this.startDate);
-      endDate = new Date(this.endDate);
-    } else if (this.startDate) {
-      startDate = new Date(this.startDate);
-      endDate = new Date(); // Today
-    } else if (this.endDate) {
-      startDate = new Date('2020-01-01'); // Default start date
-      endDate = new Date(this.endDate);
-    } else {
-      return [];
-    }
-    
-    // Generate all workweeks in the date range
-    const currentDate = new Date(startDate);
-    const endDateTime = endDate.getTime();
-    
-    while (currentDate.getTime() <= endDateTime) {
-      const workWeekKey = this.getWorkWeekKey(currentDate.toISOString().split('T')[0]);
-      if (!workWeekRange.includes(workWeekKey)) {
-        workWeekRange.push(workWeekKey);
-      }
-      
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    // Sort workweeks chronologically
-    return workWeekRange.sort((a, b) => this.compareWorkWeeks(a, b));
-  }
-
   yAxisTickFormatting(value: string): string {
     return value.length > 10 ? value.slice(0, 10) + '...' : value;
   }
@@ -934,7 +808,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   clearAllErrors(): void {
     this.selectedErrorTypes = [];
     this.generateMultiLineChart();
-    this.generateWorkWeekMultiLineChart();
   }
   
   selectTopErrors(): void {
@@ -965,7 +838,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     console.log('Selected top 5 errors from filtered data:', this.selectedErrorTypes);
   
     this.generateMultiLineChart();
-    this.generateWorkWeekMultiLineChart();
   }
 
   formatXAxisTick = (val: string): string => {
@@ -1386,13 +1258,12 @@ export class ToolListComponent implements OnInit, AfterViewInit {
   // Location trend chart methods
   onLocationTypeToggle(location: string): void {
     const index = this.selectedLocationTypes.indexOf(location);
-    if (index === -1) {
-      this.selectedLocationTypes.push(location);
-    } else {
+    if (index > -1) {
       this.selectedLocationTypes.splice(index, 1);
+    } else {
+      this.selectedLocationTypes.push(location);
     }
     this.generateLocationMultiLineChart();
-    this.generateLocationWorkWeekMultiLineChart();
   }
 
   onSearchLocation(event: Event): void {
@@ -1475,63 +1346,9 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     }
   }
 
-  generateLocationWorkWeekMultiLineChart(): void {
-    console.log('generateLocationWorkWeekMultiLineChart called - using filtered data and creating consistent time series');
-    console.log('Selected locations:', this.selectedLocationTypes);
-    console.log('Filtered tools count:', this.toolsRaw.length);
-    console.log('Complete tools count:', this.completeTools.length);
-    console.log('Date filters applied:', { startDate: this.startDate, endDate: this.endDate });
-    
-    const map: { [location: string]: { [workWeek: string]: number } } = {};
-    const uniqueCombinations: { [location: string]: { [workWeek: string]: Set<string> } } = {};
-    
-    this.selectedLocationTypes.forEach(l => {
-      map[l] = {};
-      uniqueCombinations[l] = {};
-    });
-  
-    // Use filtered data (toolsRaw) to respect date filters
-    const dataSource = this.toolsRaw;
-    console.log('Using filtered data with', dataSource.length, 'records for WorkWeek chart');
-  
-    dataSource.forEach(t => {
-      if (t.error_name === 'Unknown') return;
-      
-      const location = this.extractErrorLocation(t.error_description);
-      if (!this.selectedLocationTypes.includes(location)) return;
-      
-      const workWeekKey = this.getWorkWeekKey(t.state_in_date);
-      
-      if (!uniqueCombinations[location][workWeekKey]) {
-        uniqueCombinations[location][workWeekKey] = new Set<string>();
-      }
-      
-      const uniqueKey = `${t.state_in_date}_${location}`;
-      if (!uniqueCombinations[location][workWeekKey].has(uniqueKey)) {
-        uniqueCombinations[location][workWeekKey].add(uniqueKey);
-        map[location][workWeekKey] = (map[location][workWeekKey] || 0) + 1;
-      }
-    });
-  
-    // Create consistent workweek range based on date filters
-    const workWeekRange = this.generateWorkWeekRangeFromDateFilters();
-    console.log('WorkWeek chart will show', workWeekRange.length, 'workweeks on x-axis:', workWeekRange);
-  
-    this.errorLocationTrendWorkWeekMultiLineData = Object.entries(map).map(([location, workWeekMap]) => ({
-      name: location,
-      series: workWeekRange.map(workWeek => ({
-        name: workWeek,
-        value: workWeekMap[workWeek] || 0
-      }))
-    }));
-
-    console.log('Generated WorkWeek chart data for', this.errorLocationTrendWorkWeekMultiLineData.length, 'locations with consistent time series');
-  }
-
   clearAllLocations(): void {
     this.selectedLocationTypes = [];
     this.generateLocationMultiLineChart();
-    this.generateLocationWorkWeekMultiLineChart();
   }
   
   selectTopLocations(): void {
@@ -1565,7 +1382,6 @@ export class ToolListComponent implements OnInit, AfterViewInit {
     console.log('Selected top 5 locations from filtered data:', this.selectedLocationTypes);
   
     this.generateLocationMultiLineChart();
-    this.generateLocationWorkWeekMultiLineChart();
   }
 
   scrollToLocations(): void {

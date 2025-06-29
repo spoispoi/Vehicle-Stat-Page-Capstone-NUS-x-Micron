@@ -82,8 +82,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         # Path to your SQL script file
-        sql_script_path = r'C:\Users\irodriguez\Desktop\Vehicle-Stat-Page-Capstone-NUS-x-Micron (Use This)\vehicle_stats\tools\stored_procedures\vehicle_data.sql'
+        sql_script_path = r'C:\Users\irodriguez\Desktop\Full-Stack\VSP1.3 (Working without ww) - Copy\VSP 1.3\vehicle_stats\tools\stored_procedures\vehicle_data.sql'
 
+        #C:\Users\irodriguez\Desktop\Vehicle-Stat-Page-Capstone-NUS-x-Micron (Use This)\vehicle_stats\tools\stored_procedures\vehicle_data.sql
         # Use the helper function to execute the SQL script and get data from the database
         data = queryToDictbyScript(sql_script_path, fsprod04)
         print("Data retrieved from the database:", data)
@@ -118,7 +119,8 @@ class Command(BaseCommand):
                 event_code = mapped_row.get('event_code')
                 error_name = mapped_row.get('error_name')
                 error_description = mapped_row.get('error_description')
-
+                report_ww = mapped_row.get('report_ww') 
+                
                 # Parse ISO 8601 string and convert to local timezone
                 if isinstance(state_in_date, str):
                     utc_date = parser.isoparse(state_in_date)
@@ -136,6 +138,7 @@ class Command(BaseCommand):
                 event_code = event_code if event_code is not None else 'Unknown'
                 error_name = error_name if error_name is not None else 'Unknown'
                 error_description = error_description if error_description is not None else 'Unknown'
+                report_ww = report_ww if report_ww is not None else 'Unknown'
 
                 # Create the Tool object (does not check for duplicates anymore)
                 try:
@@ -144,7 +147,8 @@ class Command(BaseCommand):
                         state_in_date=formatted_date,
                         event_code=event_code,
                         error_name=error_name,
-                        error_description=error_description
+                        error_description=error_description,
+                        report_ww=report_ww
                     )
                     self.stdout.write(self.style.SUCCESS(f"Created tool: {tool.equip_id}"))
                     print(f"Tool created with state_in_date: {tool.state_in_date}")
